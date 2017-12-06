@@ -14,21 +14,27 @@ namespace SQLite3Helper
 {
     public class SQLite3Operate
     {
+        /// <summary>
+        /// SQLite3 data handle for operating the database.
+        /// </summary>
         private SQLite3DbHandle handle;
 
+        /// <summary>
+        /// The StringBuilder used to connect the string.
+        /// </summary>
         private StringBuilder stringBuilder;
 
-        private SQLite3Operate(string InDataBasePath) :
-            this(InDataBasePath, SQLite3OpenFlags.ReadWrite)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="T:SQLite3Helper.SQLite3Operate"/> class.
+        /// </summary>
+        /// <param name="InDatabasePath">In database path.</param>
+        /// <param name="InSQLite3OpenFlags">In SQLite3 open flags.</param>
+        private SQLite3Operate(string InDatabasePath, SQLite3OpenFlags InSQLite3OpenFlags)
         {
-        }
+            Assert.IsFalse(string.IsNullOrEmpty(InDatabasePath), "Database path can not be null.");
 
-        private SQLite3Operate(string InDataBasePath, SQLite3OpenFlags InFlags)
-        {
-            Assert.IsFalse(string.IsNullOrEmpty(InDataBasePath), "Database path can not be null.");
-
-            if (SQLite3Result.OK == SQLite3.Open(ConvertStringToUTF8Bytes(InDataBasePath),
-                out handle, (int)InFlags, IntPtr.Zero))
+            if (SQLite3Result.OK == SQLite3.Open(ConvertStringToUTF8Bytes(InDatabasePath),
+                out handle, (int)InSQLite3OpenFlags, IntPtr.Zero))
             {
                 stringBuilder = new StringBuilder(1024);
             }
@@ -36,37 +42,113 @@ namespace SQLite3Helper
             {
                 SQLite3.Close(handle);
                 handle = IntPtr.Zero;
-                Debug.LogError("Database failed to open.");
+                throw new FileLoadException("Database failed to open.");
             }
         }
 
-
-        public static SQLite3Operate Load(string InDbName, SQLite3OpenFlags InFlags = SQLite3OpenFlags.ReadOnly)
+        /// <summary>
+        /// Open a database just to read data.
+        /// If database is not exist there will throw a FileLoadException.
+        /// And you can not write data to the database.
+        /// </summary>
+        /// <returns>The to read.</returns>
+        /// <param name="InDbName">In db name.</param>
+        public static SQLite3Operate LoadToRead(string InDbName)
         {
-            string streamPath, sourcePath, destinationPath;
+            return Load(InDbName, SQLite3OpenFlags.ReadOnly);
+        }
 
-#if UNITY_ANDROID
-            streamPath = "jar:file://" + Application.dataPath + "!/assets/";
-#elif UNITY_IOS
-            streamPath = Application.dataPath + "/Raw/";
-#else
-            streamPath = Application.streamingAssetsPath + "/";
-#endif
+        /// <summary>
+        /// Open a exist database to write and read data.
+        /// If database is not exist there will throw a FileLoadException.
+        /// </summary>
+        /// <returns>The to write.</returns>
+        /// <param name="InDbName">In db name.</param>
+        public static SQLite3Operate LoadToWrite(string InDbName)
+        {
+            return Load(InDbName, SQLite3OpenFlags.ReadWrite);
+        }
 
-            sourcePath = Path.Combine(streamPath, InDbName);
-            destinationPath = Path.Combine(Application.persistentDataPath, InDbName);
+        /// <summary>
+        /// Create a new database to write and write data.
+        /// </summary>
+        /// <returns>The SQLite3Operate object.</returns>
+        /// <param name="InDbName">In db name.</param>
+        public static SQLite3Operate CreateAndWrite(string InDbName)
+        {
+            string destinationPath = Path.Combine(Application.persistentDataPath, InDbName);
+            return new SQLite3Operate(destinationPath, SQLite3OpenFlags.Create | SQLite3OpenFlags.ReadWrite);
+        }
 
-#if UNITY_ANDROID
-            using(WWW www = new WWW(sourcePath))
+        /// <summary>
+        /// Copy a exist database from the StreamingAssets path to PrersistentDataPath.
+        ///And open it according the open flags. 
+        /// </summary>
+        /// <returns>The SQLite3Operate object.</returns>
+        /// <param name="InDbName">In db name.</param>
+        /// <param name="InSQLite3OpenFlags">In SQLite3 open flags.</param>
+        private static SQLite3Operate Load(string InDbName, SQLite3OpenFlags InSQLite3OpenFlags)
+        {
+            string destinationPath = Path.Combine(Application.persistentDataPath, InDbName);
+
+            if (!File.Exists(destinationPath))
             {
-                while (www.isDone){}
-                if (string.IsNullOrEmpty(www.error)) File.WriteAllBytes(destinationPath, www.bytes);
-                else Debug.LogError(www.error);
-            }
+                string streamPath, sourcePath;
+#if UNITY_ANDROID
+                streamPath = "jar:file://" + Application.dataPath + "!/assets/";
+#elif UNITY_IOS
+                streamPath = Application.dataPath + "/Raw/";
 #else
-            File.Copy(sourcePath, destinationPath, true);
+                streamPath = Application.streamingAssetsPath + "/";
 #endif
-            return new SQLite3Operate(destinationPath, InFlags);
+
+                sourcePath = Path.Combine(streamPath, InDbName);
+
+
+#if UNITY_ANDROID
+                using(WWW www = new WWW(sourcePath))
+                {
+                    while (www.isDone){}
+                    if (string.IsNullOrEmpty(www.error)) File.WriteAllBytes(destinationPath, www.bytes);
+                    else Debug.LogError(www.error);
+                }
+#else
+                File.Copy(sourcePath, destinationPath, true);
+#endif
+            }
+
+            return new SQLite3Operate(destinationPath, InSQLite3OpenFlags);
+        }
+
+        /// <summary>
+        ///  Check the database table exists.
+        /// </summary>
+        /// <returns><c>true</c>, if table exists, <c>false</c> otherwise.</returns>
+        /// <typeparam name="T">The Subclass of SyncBase.</typeparam>
+        public bool TablesExists<T>() where T : SyncBase
+        {
+            return TableExists(SyncFactory.GetSyncProperty(typeof(T)).ClassName);
+        }
+
+        /// <summary>
+        /// Check the database table exists.
+        /// </summary>
+        /// <returns><c>true</c>, if table exists, <c>false</c> otherwise.</returns>
+        /// <param name="InTableName">In table name.</param>
+        public bool TableExists(string InTableName)
+        {
+            stringBuilder.Remove(0, stringBuilder.Length);
+            stringBuilder.Append("SELECT * FROM sqlite_master WHERE type = 'table' AND name = '")
+                         .Append(InTableName)
+                         .Append("'");
+            SQLite3Statement stmt = ExecuteQuery(stringBuilder.ToString());
+
+            bool result;
+            if (SQLite3Result.Row == SQLite3.Step(stmt)) result = SQLite3.ColumnCount(stmt) > 0;
+            else result = false;
+
+            SQLite3.Finalize(stmt);
+            return result;
         }
 
         /// <summary>
@@ -101,7 +183,7 @@ namespace SQLite3Helper
         /// <summary>
         /// Creates the table.
         /// </summary>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public void CreateTable<T>() where T : SyncBase
         {
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
@@ -179,10 +261,10 @@ namespace SQLite3Helper
         }
 
         /// <summary>
-        /// Insert subclass of Base into the table.
+        /// Insert subclass of SyncBase into the table.
         /// </summary>
-        /// <param name="InValue">Subclass of Base object.</param>
-        /// <typeparam name="T">Subclass of Base</typeparam>
+        /// <param name="InValue">Subclass of SyncBase object.</param>
+        /// <typeparam name="T">Subclass of SyncBase</typeparam>
         public void InsertT<T>(T InValue) where T : SyncBase
         {
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
@@ -191,11 +273,14 @@ namespace SQLite3Helper
             stringBuilder.Append("INSERT INTO ").Append(property.ClassName).Append(" VALUES(");
 
             int length = property.Infos.Length;
+            bool needColon;
             for (int i = 0; i < length; i++)
             {
-                stringBuilder.Append("'")
-                     .Append(property.Infos[i].GetValue(InValue, null).ToString().Replace("'", "''"))
-                    .Append("', ");
+                needColon = property.Infos[i].PropertyType.IsClass;
+                if (needColon) stringBuilder.Append("'");
+                stringBuilder.Append(property.Infos[i].GetValue(InValue, null).ToString().Replace("'", "''"));
+                if (needColon) stringBuilder.Append("'");
+                stringBuilder.Append(", ");
             }
             stringBuilder.Remove(stringBuilder.Length - 2, 2);
             stringBuilder.Append(")");
@@ -204,10 +289,10 @@ namespace SQLite3Helper
         }
 
         /// <summary>
-        /// Insert some Base subclasses into the table.
+        /// Insert some SyncBase subclasses into the table.
         /// </summary>
-        /// <param name="InValue">Some Base subclasses list.</param>
-        /// <typeparam name="T">subclass of Base.</typeparam>
+        /// <param name="InValue">Some SyncBase subclasses list.</param>
+        /// <typeparam name="T">subclass of SyncBase.</typeparam>
         public void InsertAllT<T>(List<T> InValue) where T : SyncBase
         {
             if (null == InValue) throw new ArgumentNullException();
@@ -222,11 +307,14 @@ namespace SQLite3Helper
                     stringBuilder.Append("INSERT INTO ").Append(property.ClassName).Append(" VALUES(");
 
                     int length = property.Infos.Length;
+                    bool needColon;
                     for (int j = 0; j < length; j++)
                     {
-                        stringBuilder.Append("'")
-                             .Append(property.Infos[j].GetValue(InValue[i], null).ToString().Replace("'", "''"))
-                            .Append("', ");
+                        needColon = property.Infos[i].PropertyType.IsClass;
+                        if (needColon) stringBuilder.Append("'");
+                        stringBuilder.Append(property.Infos[j].GetValue(InValue[i], null).ToString().Replace("'", "''"));
+                        if(needColon) stringBuilder.Append("'");
+                        stringBuilder.Append(", ");
                     }
                     stringBuilder.Remove(stringBuilder.Length - 2, 2);
                     stringBuilder.Append(")");
@@ -270,10 +358,10 @@ namespace SQLite3Helper
         }
 
         /// <summary>
-        /// According to the subclass of Base to update the table.
+        /// According to the subclass of SyncBase to update the table.
         /// </summary>
-        /// <param name="InValue">Base object.</param>
-        /// <typeparam name="T">subclass of Base</typeparam>
+        /// <param name="InValue">SyncBase object.</param>
+        /// <typeparam name="T">subclass of SyncBase</typeparam>
         public void UpdateT<T>(T InValue) where T : SyncBase
         {
             if (null == InValue) throw new ArgumentNullException();
@@ -301,8 +389,8 @@ namespace SQLite3Helper
         /// The value obtained by Key Reflection updates the table
         /// </summary>
         /// <param name="InIndex">The index of the object property.</param>
-        /// <param name="InValue">Base subclass object</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <param name="InValue">SyncBase subclass object</param>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public void UpdateTByKeyValue<T>(int InIndex, T InValue) where T : SyncBase
         {
             if (null == InValue) throw new ArgumentNullException();
@@ -323,10 +411,10 @@ namespace SQLite3Helper
         }
 
         /// <summary>
-        /// According to the Base subclass object updates the table or insert into the table.
+        /// According to the SyncBase subclass object updates the table or insert into the table.
         /// </summary>
-        /// <param name="InT">Base subclass object.</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <param name="InT">SyncBase subclass object.</param>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public void UpdateOrInsert<T>(T InT) where T : SyncBase
         {
             if (null == InT) throw new ArgumentNullException();
@@ -464,9 +552,9 @@ namespace SQLite3Helper
         /// Query the object from the database by ID.
         /// Only in the absence of primary key or primary key type is not an integer
         /// </summary>
-        /// <returns>Base subclass object.</returns>
+        /// <returns>SyncBase subclass object.</returns>
         /// <param name="InID">In table id as key.</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public T SelectTByID<T>(int InID) where T : SyncBase, new()
         {
             return SelectTBySQLCommand<T>("SELECT * FROM "
@@ -477,9 +565,9 @@ namespace SQLite3Helper
         /// <summary>
         /// Query the object from the database by index.
         /// </summary>
-        /// <returns>Base subclass object.</returns>
+        /// <returns>SyncBase subclass object.</returns>
         /// <param name="InIndex">In index as key, the index value is automatically generated by the database.</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public T SelectTByIndex<T>(int InIndex) where T : SyncBase, new()
         {
             return SelectTBySQLCommand<T>("SELECT * FROM "
@@ -490,10 +578,10 @@ namespace SQLite3Helper
         /// <summary>
         /// Query the object from the database by property index and perperty's value.
         /// </summary>
-        /// <returns>Base subclass object.</returns>
+        /// <returns>SyncBase subclass object.</returns>
         /// <param name="InPropertyIndex">In property index, The index value is specified by the SyncAttribute.</param>
         /// <param name="InExpectedValue">Expected values.</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public T SelectTByKeyValue<T>(int InPropertyIndex, object InExpectedValue) where T : SyncBase, new()
         {
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
@@ -514,10 +602,10 @@ namespace SQLite3Helper
         /// <summary>
         /// Query the object from the database by property name and perperty's value.
         /// </summary>
-        /// <returns>Base subclass object.</returns>
+        /// <returns>SyncBase subclass object.</returns>
         /// <param name="InPropertyName">In property name.</param>
         /// <param name="InExpectedValue">Expected values.</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public T SelectTByKeyValue<T>(string InPropertyName, object InExpectedValue) where T : SyncBase, new()
         {
             stringBuilder.Remove(0, stringBuilder.Length);
@@ -535,9 +623,9 @@ namespace SQLite3Helper
         /// <summary>
         /// Query the object from the database by sql statement.
         /// </summary>
-        /// <returns>Base subclass object.</returns>
+        /// <returns>SyncBase subclass object.</returns>
         /// <param name="InSQLStatement">In sql statement.</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public T SelectTBySQLCommand<T>(string InSQLStatement) where T : SyncBase, new()
         {
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
@@ -560,7 +648,7 @@ namespace SQLite3Helper
         /// <param name="InIndexes">property indexes, The index value is specified by the SyncAttribute.</param>
         /// <param name="InOperators">Operators between properties and expected values.</param>
         /// <param name="InExpectedValues">Expected values.</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public Dictionary<int, T> SelectDictT<T>(int[] InIndexes, string[] InOperators, object[] InExpectedValues) where T : SyncBase, new()
         {
             if (null == InIndexes || null == InOperators || null == InExpectedValues) throw new ArgumentNullException();
@@ -584,7 +672,7 @@ namespace SQLite3Helper
         /// <param name="InPropertyNames">property names.</param>
         /// <param name="InOperators">Operators between properties and expected values.</param>
         /// <param name="InExpectedValues">Expected values.</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public Dictionary<int, T> SelectDictT<T>(string[] InPropertyNames, string[] InOperators, object[] InExpectedValues) where T : SyncBase, new()
         {
             if (null == InPropertyNames || null == InOperators || null == InExpectedValues) throw new ArgumentNullException();
@@ -610,7 +698,7 @@ namespace SQLite3Helper
         /// </summary>
         /// <returns>Returns the result of the query as a dictionary.</returns>
         /// <param name="InSQLStatement">In SQL Statement</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public Dictionary<int, T> SelectDictT<T>(string InSQLStatement = "") where T : SyncBase, new()
         {
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
@@ -649,7 +737,7 @@ namespace SQLite3Helper
         /// <param name="InIndexes">property indexes, The index value is specified by the SyncAttribute.</param>
         /// <param name="InOperators">Operators between properties and expected values.</param>
         /// <param name="InExpectedValues">Expected values.</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public T[] SelectArrayT<T>(int[] InIndexes, string[] InOperators, object[] InExpectedValues) where T : SyncBase, new()
         {
             int length = InIndexes.Length;
@@ -670,7 +758,7 @@ namespace SQLite3Helper
         /// <param name="InPropertyNames">property names.</param>
         /// <param name="InOperators">Operators between properties and expected values.</param>
         /// <param name="InExpectedValues">Expected values.</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public T[] SelectArrayT<T>(string[] InPropertyNames, string[] InOperators, object[] InExpectedValues) where T : SyncBase, new()
         {
             if (null == InPropertyNames || null == InOperators || null == InExpectedValues) throw new ArgumentNullException();
@@ -697,7 +785,7 @@ namespace SQLite3Helper
         /// </summary>
         /// <returns>Returns the result of the query as a array.</returns>
         /// <param name="InCondition">In Condition.</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public T[] SelectArrayT<T>(string InCondition = "") where T : SyncBase, new()
         {
             stringBuilder.Remove(0, stringBuilder.Length);
@@ -730,14 +818,14 @@ namespace SQLite3Helper
         }
 
         /// <summary>
-        /// Convert query result from database to Base subclass object.
+        /// Convert query result from database to SyncBase subclass object.
         /// </summary>
-        /// <returns>Base subclass object.</returns>
-        /// <param name="InBaseSubclassObj">In Base subclass object.</param>
-        /// <param name="InPropertyInfos">In Base subclass property infos.</param>
+        /// <returns>SyncBase subclass object.</returns>
+        /// <param name="InBaseSubclassObj">In SyncBase subclass object.</param>
+        /// <param name="InPropertyInfos">In SyncBase subclass property infos.</param>
         /// <param name="InStmt">SQLite3 result address.</param>
         /// <param name="InCount">In sqlite3 result count.</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         private T GetT<T>(T InBaseSubclassObj, PropertyInfo[] InPropertyInfos, SQLite3Statement InStmt, int InCount) where T : SyncBase, new()
         {
             Type type;
@@ -789,10 +877,10 @@ namespace SQLite3Helper
         }
 
         /// <summary>
-        /// Deletes the data by Base subclass object.
+        /// Deletes the data by SyncBase subclass object.
         /// </summary>
         /// <param name="InID">In Subclass object id.</param>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public void DeleteT<T>(T InID) where T : SyncBase
         {
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
@@ -809,9 +897,9 @@ namespace SQLite3Helper
         }
 
         /// <summary>
-        /// Clear table data by Base of subclass.
+        /// Clear table data by SyncBase of subclass.
         /// </summary>
-        /// <typeparam name="T">Subclass of Base.</typeparam>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public void DeleteAllT<T>() where T : SyncBase
         {
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
@@ -826,6 +914,28 @@ namespace SQLite3Helper
         }
 
         /// <summary>
+        /// Drop the table.
+        /// </summary>
+        /// <typeparam name="T">Subclass of SyncBase.</typeparam>
+        public void DropTable<T>()
+        {
+            DropTable(SyncFactory.GetSyncProperty(typeof(T)).ClassName);
+        }
+
+        /// <summary>
+        /// Drop the table.
+        /// </summary>
+        /// <param name="InTableName">In table name.</param>
+        public void DropTable(string InTableName)
+        {
+            stringBuilder.Remove(0, stringBuilder.Length);
+            stringBuilder.Append("DROP TABLE ")
+                         .Append(InTableName);
+
+            Exec(stringBuilder.ToString());
+        }
+
+        /// <summary>
         /// Executed the SQL statement and return the address of sqlite3.
         /// </summary>
         /// <returns>the address of sqlite3.</returns>
@@ -833,13 +943,24 @@ namespace SQLite3Helper
         private SQLite3Statement ExecuteQuery(string InSQLStatement)
         {
             Debug.LogError(InSQLStatement);
+            SQLite3Statement stmt = IntPtr.Zero;
 
-            SQLite3Statement stmt;
-
-            if (SQLite3Result.OK == SQLite3.Prepare2(handle, InSQLStatement, GetUTF8ByteCount(InSQLStatement), out stmt, IntPtr.Zero))
-                return stmt;
-            else
-                throw new Exception(InSQLStatement + " Error: \n" + SQLite3.GetErrmsg(stmt));
+            try
+            {
+                if (SQLite3Result.OK == SQLite3.Prepare2(handle, InSQLStatement, GetUTF8ByteCount(InSQLStatement), out stmt, IntPtr.Zero))
+                    return stmt;
+                else
+                    throw new Exception(InSQLStatement + " Error: \n" + SQLite3.GetErrmsg(stmt));
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError(ex.Message);
+            }
+            finally
+            {
+                SQLite3.Finalize(stmt);
+            }
+            return IntPtr.Zero;
         }
 
         /// <summary>
@@ -849,16 +970,30 @@ namespace SQLite3Helper
         /// <param name="InSQLStatement">In SQL Statement.</param>
         public void Exec(string InSQLStatement)
         {
-            SQLite3Statement stmt;
+            Debug.LogError(InSQLStatement);
+            SQLite3Statement stmt = IntPtr.Zero;
 
-            if (SQLite3Result.OK == SQLite3.Prepare2(handle, InSQLStatement, GetUTF8ByteCount(InSQLStatement), out stmt, IntPtr.Zero))
+            try
             {
-                if (SQLite3Result.Done != SQLite3.Step(stmt))
-                    throw new Exception(SQLite3.GetErrmsg(stmt));
-            }
-            else throw new Exception(SQLite3.GetErrmsg(stmt));
+                if (SQLite3Result.OK == SQLite3.Prepare2(handle, InSQLStatement, GetUTF8ByteCount(InSQLStatement), out stmt, IntPtr.Zero))
+                {
+                    if (SQLite3Result.Done != SQLite3.Step(stmt))
+                        throw new Exception(SQLite3.GetErrmsg(stmt));
+                }
+                else throw new Exception(SQLite3.GetErrmsg(stmt));
 
-            SQLite3.Finalize(stmt);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError(ex.Message);
+            }
+            finally
+            {
+                SQLite3.Finalize(stmt);
+
+            }
+
+
         }
 
         /// <summary>

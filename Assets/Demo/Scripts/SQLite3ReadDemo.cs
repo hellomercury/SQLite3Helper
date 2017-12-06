@@ -5,13 +5,13 @@ using SQLite3Helper.DataStruct;
 using UnityEngine;
 using UnityEngine.Profiling;
 
-public class Demo : MonoBehaviour
+public class SQLite3ReadDemo : MonoBehaviour
 {
 
     SQLite3Operate operate;
     void Start()
     {
-        operate = SQLite3Operate.Load("Static.db", SQLite3OpenFlags.ReadOnly);
+        operate = SQLite3Operate.LoadToRead("Static.db");
 
         Application.logMessageReceived += (condition, stackTrace, type) =>
         {
@@ -24,11 +24,13 @@ public class Demo : MonoBehaviour
     bool isSelectSingleData = false, isSelectArrayData = false, isSelectDictData;
     void OnGUI()
     {
-        GUILayout.BeginArea(new Rect(0, 0, Screen.width / 2, Screen.height));
+        GUILayout.BeginArea(new Rect(0, 0, Screen.width / 3, Screen.height));
         GUI.skin.button.fontSize = 32;
+        GUI.skin.button.alignment = TextAnchor.MiddleLeft;
         GUI.skin.label.fontSize = 32;
         GUI.skin.label.fontStyle = FontStyle.Bold;
-        if (GUILayout.Button("Select single data."))
+
+        if (GUILayout.Button((isSelectSingleData ? "V" : ">") + "  Select * From Item Get Single Data."))
         {
             isSelectSingleData = !isSelectSingleData;
             if(isSelectSingleData)
@@ -40,12 +42,17 @@ public class Demo : MonoBehaviour
 
         if (isSelectSingleData)
         {
-            if (GUILayout.Button("Select * From Item By ID"))
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
+            if (GUILayout.Button(" By ID"))
             {
                 Item item = operate.SelectTByID<Item>(20300001);
                 Debug.LogError(item);
             }
+            GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
             //Only in the absence of primary key or primary key type is not an integer
             //GUILayout.Label("SELECT * FROM Item by index only in the absence of primary key or primary key type is not an integer");
             if (GUILayout.Button("Select * From Item By Index"))
@@ -56,7 +63,10 @@ public class Demo : MonoBehaviour
                 if (null == item) Debug.LogError("Error: SELECT * FROM Item by index only in the absence of primary key or primary key type is not an integer!");
                 else Debug.LogError(item);
             }
+            GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
             if (GUILayout.Button("Select * From Item By KeyValue"))
             {
                 Profiler.BeginSample("1");
@@ -64,7 +74,10 @@ public class Demo : MonoBehaviour
                 Profiler.EndSample();
                 Debug.LogError(item);
             }
+            GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
             if (GUILayout.Button("Select * From Item By ID"))
             {
                 Profiler.BeginSample("2");
@@ -72,10 +85,10 @@ public class Demo : MonoBehaviour
                 Profiler.EndSample();
                 Debug.LogError(item);
             }
-
+            GUILayout.EndHorizontal();
         }
 
-        if (GUILayout.Button("Select array data"))
+        if (GUILayout.Button((isSelectArrayData ? "V" : ">") + "\tSelect array data"))
         {
             isSelectArrayData = !isSelectArrayData;
             if(isSelectArrayData)
@@ -87,7 +100,8 @@ public class Demo : MonoBehaviour
 
         if (isSelectArrayData)
         {
-
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
             if (GUILayout.Button("Select * From Item Array by Indexes"))
             {
                 Profiler.BeginSample("3");
@@ -99,7 +113,10 @@ public class Demo : MonoBehaviour
                     Debug.LogError(itor);
                 }
             }
+            GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
             if (GUILayout.Button("Select * From Item Dictionary by Name"))
             {
                 Profiler.BeginSample("4");
@@ -111,7 +128,10 @@ public class Demo : MonoBehaviour
                     Debug.LogError(itor);
                 }
             }
+            GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
             if (GUILayout.Button("Select * From Item Array by sql command"))
             {
                 Profiler.BeginSample("5");
@@ -123,11 +143,11 @@ public class Demo : MonoBehaviour
                     Debug.LogError(itor);
                 }
             }
-
+            GUILayout.EndHorizontal();
 
         }
 
-        if (GUILayout.Button("Select Dictionary data"))
+        if (GUILayout.Button((isSelectDictData ? "V" : ">") + "\tSelect Dictionary data"))
         {
             isSelectDictData = !isSelectDictData;
             if(isSelectDictData)
@@ -139,6 +159,8 @@ public class Demo : MonoBehaviour
 
         if (isSelectDictData)
         {
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
             if (GUILayout.Button("Select * From Item Dictionary by ID"))
             {
                 Profiler.BeginSample("6");
@@ -149,7 +171,10 @@ public class Demo : MonoBehaviour
                     Debug.LogError(itor.Key + ":" + itor.Value);
                 }
             }
+            GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
             if (GUILayout.Button("Select * From Item Dictionary by Name"))
             {
                 Profiler.BeginSample("7");
@@ -160,7 +185,10 @@ public class Demo : MonoBehaviour
                     Debug.LogError(itor.Key + ":" + itor.Value);
                 }
             }
+            GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
             if (GUILayout.Button("Select * From Item Dictionary by sql command"))
             {
                 Profiler.BeginSample("8");
@@ -171,11 +199,12 @@ public class Demo : MonoBehaviour
                     Debug.LogError(itor.Key + ":" + itor.Value);
                 }
             }
+            GUILayout.EndHorizontal();
         }
 
         GUILayout.EndArea();
 
-        GUILayout.BeginArea(new Rect(Screen.width / 2, 0, Screen.width / 2, Screen.height));
+        GUILayout.BeginArea(new Rect(Screen.width / 3, 0, Screen.width * 2 / 3, Screen.height));
         scrollPos = GUILayout.BeginScrollView(scrollPos);
         GUILayout.Label(log);
         GUILayout.EndScrollView();

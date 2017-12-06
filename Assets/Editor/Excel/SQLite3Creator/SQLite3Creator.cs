@@ -19,7 +19,7 @@ namespace SQLite3Helper.Editor
         {
             string path = Application.dataPath + "/" + InDatabasePath;
 
-            SQLite3Operate handle = SQLite3Operate.Load(path, SQLite3OpenFlags.Create | SQLite3OpenFlags.ReadWrite);
+            SQLite3Operate handle = SQLite3Operate.CreateAndWrite(path);
 
             StringBuilder sb = new StringBuilder(512);
 
