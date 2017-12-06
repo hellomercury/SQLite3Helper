@@ -310,7 +310,7 @@ namespace SQLite3Helper
                     bool needColon;
                     for (int j = 0; j < length; j++)
                     {
-                        needColon = property.Infos[i].PropertyType.IsClass;
+                        needColon = property.Infos[j].PropertyType.IsClass;
                         if (needColon) stringBuilder.Append("'");
                         stringBuilder.Append(property.Infos[j].GetValue(InValue[i], null).ToString().Replace("'", "''"));
                         if(needColon) stringBuilder.Append("'");
