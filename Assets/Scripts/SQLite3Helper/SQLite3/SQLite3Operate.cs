@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
-using UnityEngine.Assertions;
 using SQLite3DbHandle = System.IntPtr;
 using SQLite3Statement = System.IntPtr;
 using Object = System.Object;
@@ -31,7 +30,7 @@ namespace SQLite3Helper
         /// <param name="InSQLite3OpenFlags">In SQLite3 open flags.</param>
         private SQLite3Operate(string InDatabasePath, SQLite3OpenFlags InSQLite3OpenFlags)
         {
-            Assert.IsFalse(string.IsNullOrEmpty(InDatabasePath), "Database path can not be null.");
+            if (string.IsNullOrEmpty(InDatabasePath)) throw new ArgumentNullException();
 
             if (SQLite3Result.OK == SQLite3.Open(ConvertStringToUTF8Bytes(InDatabasePath),
                 out handle, (int)InSQLite3OpenFlags, IntPtr.Zero))
@@ -42,7 +41,7 @@ namespace SQLite3Helper
             {
                 SQLite3.Close(handle);
                 handle = IntPtr.Zero;
-                throw new FileLoadException("Database failed to open.");
+                ShowMsg("Database failed to open.");
             }
         }
 
@@ -110,7 +109,7 @@ namespace SQLite3Helper
                 {
                     while (www.isDone){}
                     if (string.IsNullOrEmpty(www.error)) File.WriteAllBytes(destinationPath, www.bytes);
-                    else Debug.LogError(www.error);
+                    else ShowMsg(www.error);
                 }
 #else
                 File.Copy(sourcePath, destinationPath, true);
@@ -125,7 +124,7 @@ namespace SQLite3Helper
         /// </summary>
         /// <returns><c>true</c>, if table exists, <c>false</c> otherwise.</returns>
         /// <typeparam name="T">The Subclass of SyncBase.</typeparam>
-        public bool TablesExists<T>() where T : SyncBase
+        public bool TableExists<T>() where T : SyncBase
         {
             return TableExists(SyncFactory.GetSyncProperty(typeof(T)).ClassName);
         }
@@ -143,11 +142,62 @@ namespace SQLite3Helper
                          .Append("'");
             SQLite3Statement stmt = ExecuteQuery(stringBuilder.ToString());
 
-            bool result;
-            if (SQLite3Result.Row == SQLite3.Step(stmt)) result = SQLite3.ColumnCount(stmt) > 0;
-            else result = false;
+            bool isExists = false;
+            if (SQLite3Statement.Zero != stmt)
+            {
+                SQLite3Result result = SQLite3.Step(stmt);
+                if (SQLite3Result.Row == result) isExists = true;
+                else if (SQLite3Result.Error == result) isExists = false;
+                else ShowMsg(SQLite3.GetErrmsg(stmt));
+            }
 
             SQLite3.Finalize(stmt);
+
+            return isExists;
+        }
+
+        public bool DataExists(string InTableName, string InProperty, object InValue)
+        {
+            stringBuilder.Remove(0, stringBuilder.Length);
+            stringBuilder.Append("SELECT * FROM ")
+                         .Append(InTableName)
+                         .Append(" WHERE ")
+                         .Append(InProperty)
+                         .Append(" = ")
+                         .Append(InValue);
+
+            return DataExists(stringBuilder.ToString());
+        }
+
+        public bool DataExists<T>(T InObject) where T : SyncBase
+        {
+            stringBuilder.Remove(0, stringBuilder.Length);
+            SyncProperty property = SyncFactory.GetSyncProperty(InObject);
+            stringBuilder.Append("SELECT * FROM ")
+                         .Append(property.ClassName)
+                         .Append(" WHERE ")
+                         .Append(property.Infos[0].Name)
+                         .Append(" = ")
+                         .Append(property.Infos[0].GetValue(InObject, null));
+
+            return DataExists(stringBuilder.ToString());
+        }
+
+        public bool DataExists(string InSQLStatement)
+        {
+            SQLite3Statement stmt = ExecuteQuery(InSQLStatement);
+
+            bool result = false;
+            if (SQLite3Statement.Zero != stmt)
+            {
+
+                if (SQLite3Result.Row == SQLite3.Step(stmt)) result = true;
+                else if (SQLite3Result.Done == SQLite3.Step(stmt)) result = false;
+                else ShowMsg(SQLite3.GetErrmsg(stmt));
+            }
+
+            SQLite3.Finalize(stmt);
+
             return result;
         }
 
@@ -313,7 +363,7 @@ namespace SQLite3Helper
                         needColon = property.Infos[j].PropertyType.IsClass;
                         if (needColon) stringBuilder.Append("'");
                         stringBuilder.Append(property.Infos[j].GetValue(InValue[i], null).ToString().Replace("'", "''"));
-                        if(needColon) stringBuilder.Append("'");
+                        if (needColon) stringBuilder.Append("'");
                         stringBuilder.Append(", ");
                     }
                     stringBuilder.Remove(stringBuilder.Length - 2, 2);
@@ -420,26 +470,13 @@ namespace SQLite3Helper
             if (null == InT) throw new ArgumentNullException();
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
 
-            SQLite3Statement stmt;
-
             stringBuilder.Remove(0, stringBuilder.Length);
             stringBuilder.Append("SELECT * FROM ")
                 .Append(property.ClassName)
                 .Append(" WHERE ID = ")
                 .Append(property.Infos[0].GetValue(InT, null));
 
-            bool isUpdate = false;
-            string sql = stringBuilder.ToString();
-            if (SQLite3Result.OK == SQLite3.Prepare2(handle, sql, GetUTF8ByteCount(sql), out stmt, IntPtr.Zero))
-            {
-                if (SQLite3Result.Row == SQLite3.Step(stmt))
-                    isUpdate = SQLite3.ColumnCount(stmt) > 0;
-            }
-            else throw new Exception(SQLite3.GetErrmsg(handle));
-
-            SQLite3.Finalize(stmt);
-
-            if (isUpdate) UpdateT(InT);
+            if (DataExists(InT)) UpdateT(InT);
             else InsertT(InT);
         }
 
@@ -460,10 +497,19 @@ namespace SQLite3Helper
                 .Append(InID);
 
             SQLite3Statement stmt = ExecuteQuery(stringBuilder.ToString());
-
             Object[] obj = null;
-            if (SQLite3Result.Row == SQLite3.Step(stmt))
-                obj = GetObjects(stmt, SQLite3.ColumnCount(stmt));
+            if (SQLite3Statement.Zero != stmt)
+            {
+                SQLite3Result result = SQLite3.Step(stmt);
+                if (SQLite3Result.Row == result)
+                    obj = GetObjects(stmt, SQLite3.ColumnCount(stmt));
+                else if (SQLite3Result.Error == result)
+                {
+                    if (!TableExists(InTableName)) ShowMsg("No such table : " + InTableName);
+                    else ShowMsg(SQLite3.GetErrmsg(stmt));
+                }
+
+            }
 
             SQLite3.Finalize(stmt);
 
@@ -492,18 +538,26 @@ namespace SQLite3Helper
 
             SQLite3Statement stmt = ExecuteQuery(stringBuilder.ToString());
 
-            List<Object[]> obj = new List<object[]>();
-            int count = SQLite3.ColumnCount(stmt);
-            SQLite3Result sqlite3Result;
-            while (true)
+            List<Object[]> obj = null;
+            if (SQLite3Statement.Zero != stmt)
             {
-                sqlite3Result = SQLite3.Step(stmt);
-                if (SQLite3Result.Row == sqlite3Result)
+                obj = new List<object[]>();
+                int count = SQLite3.ColumnCount(stmt);
+                SQLite3Result sqlite3Result;
+                while (true)
                 {
-                    obj.Add(GetObjects(stmt, count));
+                    sqlite3Result = SQLite3.Step(stmt);
+                    if (SQLite3Result.Row == sqlite3Result)
+                    {
+                        obj.Add(GetObjects(stmt, count));
+                    }
+                    else if (SQLite3Result.Done == sqlite3Result) break;
+                    else
+                    {
+                        ShowMsg(SQLite3.GetErrmsg(stmt));
+                        break;
+                    }
                 }
-                else if (SQLite3Result.Done == sqlite3Result) break;
-                else throw new Exception(SQLite3.GetErrmsg(stmt));
             }
 
             SQLite3.Finalize(stmt);
@@ -633,9 +687,18 @@ namespace SQLite3Helper
             SQLite3Statement stmt = ExecuteQuery(InSQLStatement);
 
             T t = default(T);
-            if (SQLite3Result.Row == SQLite3.Step(stmt))
-                t = GetT(new T(), property.Infos, stmt, property.InfosLength);
-            else Debug.LogError(SQLite3.GetErrmsg(stmt));
+            if (SQLite3Statement.Zero != stmt)
+            {
+                SQLite3Result result = SQLite3.Step(stmt);
+                if (SQLite3Result.Row == result)
+                    t = GetT(new T(), property.Infos, stmt, property.InfosLength);
+                else if (SQLite3Result.Error == result)
+                {
+                    if (!TableExists(property.ClassName)) ShowMsg("No such table : " + property.ClassName);
+                    else ShowMsg(SQLite3.GetErrmsg(stmt));
+                }
+            }
+
             SQLite3.Finalize(stmt);
 
             return t;
@@ -710,20 +773,30 @@ namespace SQLite3Helper
                 .Append(InSQLStatement);
 
             SQLite3Statement stmt = ExecuteQuery(stringBuilder.ToString());
-            Dictionary<int, T> resultDict = new Dictionary<int, T>();
-            int count = SQLite3.ColumnCount(stmt), id;
-            SQLite3Result result;
-            while (true)
+
+            Dictionary<int, T> resultDict = null;
+            if (SQLite3Statement.Zero != stmt)
             {
-                result = SQLite3.Step(stmt);
-                if (SQLite3Result.Row == result)
+                resultDict = new Dictionary<int, T>();
+                int count = SQLite3.ColumnCount(stmt), id;
+                SQLite3Result result;
+                while (true)
                 {
-                    T t = GetT(new T(), property.Infos, stmt, count);
-                    id = (int)property.Infos[0].GetValue(t, null);
-                    if (!resultDict.ContainsKey(id)) resultDict.Add(id, t);
+                    result = SQLite3.Step(stmt);
+                    if (SQLite3Result.Row == result)
+                    {
+                        T t = GetT(new T(), property.Infos, stmt, count);
+                        id = (int)property.Infos[0].GetValue(t, null);
+                        if (!resultDict.ContainsKey(id)) resultDict.Add(id, t);
+                    }
+                    else if (SQLite3Result.Done == result) break;
+                    else
+                    {
+                        if (!TableExists(property.ClassName)) ShowMsg("No such table : " + property.ClassName);
+                        else ShowMsg(SQLite3.GetErrmsg(stmt));
+                        break;
+                    }
                 }
-                else if (SQLite3Result.Done == result) break;
-                else throw new Exception(SQLite3.GetErrmsg(stmt));
             }
             SQLite3.Finalize(stmt);
 
@@ -800,18 +873,26 @@ namespace SQLite3Helper
 
             SQLite3Statement stmt = ExecuteQuery(stringBuilder.ToString());
 
-            List<T> resultList = new List<T>();
-            SQLite3Result sqlite3Result;
-            int count = SQLite3.ColumnCount(stmt);
-            while (true)
+            List<T> resultList = null;
+            if (SQLite3Statement.Zero == stmt)
             {
-                sqlite3Result = SQLite3.Step(stmt);
-                if (SQLite3Result.Row == sqlite3Result)
-                    resultList.Add(GetT(new T(), property.Infos, stmt, count));
-                else if (SQLite3Result.Done == sqlite3Result) break;
-                else throw new Exception(SQLite3.GetErrmsg(stmt));
+                resultList = new List<T>();
+                SQLite3Result sqlite3Result;
+                int count = SQLite3.ColumnCount(stmt);
+                while (true)
+                {
+                    sqlite3Result = SQLite3.Step(stmt);
+                    if (SQLite3Result.Row == sqlite3Result)
+                        resultList.Add(GetT(new T(), property.Infos, stmt, count));
+                    else if (SQLite3Result.Done == sqlite3Result) break;
+                    else
+                    {
+                        if (!TableExists(property.ClassName)) ShowMsg("No such table : " + property.ClassName);
+                        else ShowMsg(SQLite3.GetErrmsg(stmt));
+                        break;
+                    }
+                }
             }
-
             SQLite3.Finalize(stmt);
 
             return resultList.ToArray();
@@ -849,7 +930,7 @@ namespace SQLite3Helper
                 {
                     InPropertyInfos[i].SetValue(InBaseSubclassObj, SQLite3.ColumnDouble(InStmt, i), null);
                 }
-                else if (typeof(string) == type)
+                else
                 {
                     InPropertyInfos[i].SetValue(InBaseSubclassObj, SQLite3.ColumnText(InStmt, i), null);
                 }
@@ -932,7 +1013,11 @@ namespace SQLite3Helper
             stringBuilder.Append("DROP TABLE ")
                          .Append(InTableName);
 
-            Exec(stringBuilder.ToString());
+            Exec(stringBuilder.ToString(), stmt =>
+            {
+                if (!TableExists(InTableName)) ShowMsg("No such table : " + InTableName);
+                else ShowMsg(SQLite3.GetErrmsg(stmt));
+            });
         }
 
         /// <summary>
@@ -942,23 +1027,15 @@ namespace SQLite3Helper
         /// <param name="InSQLStatement">In sql statement.</param>
         private SQLite3Statement ExecuteQuery(string InSQLStatement)
         {
-            Debug.LogError(InSQLStatement);
             SQLite3Statement stmt = IntPtr.Zero;
 
-            try
+            if (SQLite3Result.OK != SQLite3.Prepare2(handle, InSQLStatement, GetUTF8ByteCount(InSQLStatement), out stmt, IntPtr.Zero))
             {
-                if (SQLite3Result.OK == SQLite3.Prepare2(handle, InSQLStatement, GetUTF8ByteCount(InSQLStatement), out stmt, IntPtr.Zero))
-                    return stmt;
-                else
-                    throw new Exception(InSQLStatement + " Error: \n" + SQLite3.GetErrmsg(stmt));
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError(ex.Message);
+                ShowMsg(InSQLStatement + "\nError: " + SQLite3.GetErrmsg(stmt));
                 SQLite3.Finalize(stmt);
             }
 
-            return IntPtr.Zero;
+            return stmt;
         }
 
         /// <summary>
@@ -966,31 +1043,21 @@ namespace SQLite3Helper
         /// </summary>
         /// <returns>The exec.</returns>
         /// <param name="InSQLStatement">In SQL Statement.</param>
-        public void Exec(string InSQLStatement)
+        public void Exec(string InSQLStatement, Action<SQLite3Statement> InErrorAction = null)
         {
-            Debug.LogError(InSQLStatement);
-            SQLite3Statement stmt = IntPtr.Zero;
+            SQLite3Statement stmt;
 
-            try
+            SQLite3Result result = SQLite3.Prepare2(handle, InSQLStatement, GetUTF8ByteCount(InSQLStatement), out stmt, IntPtr.Zero);
+            if (SQLite3Result.OK == result)
             {
-                if (SQLite3Result.OK == SQLite3.Prepare2(handle, InSQLStatement, GetUTF8ByteCount(InSQLStatement), out stmt, IntPtr.Zero))
-                {
-                    if (SQLite3Result.Done != SQLite3.Step(stmt))
-                        throw new Exception(SQLite3.GetErrmsg(stmt));
-                }
-                else throw new Exception(SQLite3.GetErrmsg(stmt));
-
+                if (SQLite3Result.Done != SQLite3.Step(stmt))
+                    if (null == InErrorAction) ShowMsg(SQLite3.GetErrmsg(stmt));
+                    else InErrorAction.Invoke(stmt);
             }
-            catch (Exception ex)
-            {
-                Debug.LogError(ex.Message);
-            }
-            finally
-            {
-                SQLite3.Finalize(stmt);
-            }
+            else ShowMsg(SQLite3.GetErrmsg(stmt));
 
 
+            SQLite3.Finalize(stmt);
         }
 
         /// <summary>
@@ -1000,10 +1067,8 @@ namespace SQLite3Helper
         {
             if (SQLite3DbHandle.Zero != handle)
             {
-                if (SQLite3Result.OK == SQLite3.Close(handle))
-                    handle = SQLite3DbHandle.Zero;
-                else
-                    Debug.LogError(SQLite3.GetErrmsg(handle));
+                if (SQLite3Result.OK == SQLite3.Close(handle)) handle = SQLite3DbHandle.Zero;
+                else ShowMsg(SQLite3.GetErrmsg(handle));
             }
         }
 
@@ -1029,6 +1094,11 @@ namespace SQLite3Helper
             Encoding.UTF8.GetBytes(InStr, 0, InStr.Length, bytes, 0);
 
             return bytes;
+        }
+
+        private void ShowMsg(string InMsg)
+        {
+            Debug.LogError(InMsg);
         }
     }
 }

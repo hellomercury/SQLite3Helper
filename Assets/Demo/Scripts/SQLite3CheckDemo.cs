@@ -30,7 +30,7 @@ public class SQLite3CheckDemo : MonoBehaviour
         GUI.skin.label.fontSize = 32;
         GUI.skin.label.fontStyle = FontStyle.Bold;
 
-        if (GUILayout.Button((isSelectSingleData ? "V" : ">") + "\tCheck table."))
+        if (GUILayout.Button((isSelectSingleData ? "V" : ">") + "\tCheck table exists."))
         {
             isSelectSingleData = !isSelectSingleData;
             if (isSelectSingleData)
@@ -44,7 +44,7 @@ public class SQLite3CheckDemo : MonoBehaviour
         {
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Check"))
+            if (GUILayout.Button("Check table exists by table name."))
             {
                bool result = operate.TableExists("CheckTable");
                 Debug.LogError(result);
@@ -53,21 +53,16 @@ public class SQLite3CheckDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            //Only in the absence of primary key or primary key type is not an integer
-            //GUILayout.Label("SELECT * FROM Item by index only in the absence of primary key or primary key type is not an integer");
-            if (GUILayout.Button("check"))
+            if (GUILayout.Button("check table exists by object."))
             {
-                Profiler.BeginSample("0");
-                Item item = operate.SelectTByIndex<Item>(1);
-                Profiler.EndSample();
-                if (null == item) Debug.LogError("Error: SELECT * FROM Item by index only in the absence of primary key or primary key type is not an integer!");
-                else Debug.LogError(item);
+                bool result = operate.TableExists<CheckTable>();
+                Debug.LogError(result);
             }
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Drop"))
+            if (GUILayout.Button("Drop the table named 'CheckTable'."))
             {
                 operate.DropTable("CheckTable");
             }
@@ -75,9 +70,9 @@ public class SQLite3CheckDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Creat"))
+            if (GUILayout.Button("Creat the table named 'CheckTable'"))
             {
-                operate.CreateTable("CheckTable", "ID INTEGER", "Name TEXT");
+                operate.CreateTable<CheckTable>();
             }
             GUILayout.EndHorizontal();
         }
