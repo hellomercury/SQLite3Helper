@@ -510,7 +510,6 @@ namespace SQLite3Helper.Editor
                                                             bool isAutoIncrement = (constraint & SQLite3Constraint.AutoIncrement) != 0;
                                                             bool isNotNull = (constraint & SQLite3Constraint.NotNull) != 0;
                                                             bool isUnique = (constraint & SQLite3Constraint.Unique) != 0;
-                                                            bool isDefault = (constraint & SQLite3Constraint.Default) != 0;
 
                                                             EditorGUILayout.LabelField("SQLite3 Constraint:", leftTittleStyle, GUILayout.Width(114));
                                                             isPrimaryKey = EditorGUILayout.ToggleLeft("PrimaryKey", isPrimaryKey, GUILayout.Width(80));
@@ -525,7 +524,7 @@ namespace SQLite3Helper.Editor
                                                             GUI.enabled = true;
                                                             isNotNull = EditorGUILayout.ToggleLeft("NotNull", isNotNull, GUILayout.Width(60));
                                                             isUnique = EditorGUILayout.ToggleLeft("Unique", isUnique, GUILayout.Width(60));
-                                                            isDefault = !(isPrimaryKey || isAutoIncrement || isNotNull || isUnique);
+                                                            bool isDefault = !(isPrimaryKey || isAutoIncrement || isNotNull || isUnique);
                                                             isDefault = EditorGUILayout.ToggleLeft("Default", isDefault, GUILayout.Width(60));
                                                             if (isDefault) isPrimaryKey = isAutoIncrement = isNotNull = isUnique = false;
 

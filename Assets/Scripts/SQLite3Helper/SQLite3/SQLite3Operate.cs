@@ -955,11 +955,9 @@ namespace SQLite3Helper
             catch (Exception ex)
             {
                 Debug.LogError(ex.Message);
-            }
-            finally
-            {
                 SQLite3.Finalize(stmt);
             }
+
             return IntPtr.Zero;
         }
 
@@ -990,7 +988,6 @@ namespace SQLite3Helper
             finally
             {
                 SQLite3.Finalize(stmt);
-
             }
 
 
