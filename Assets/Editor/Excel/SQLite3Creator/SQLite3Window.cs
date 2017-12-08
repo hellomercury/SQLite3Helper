@@ -522,8 +522,16 @@ namespace SQLite3Helper.Editor
 
                                                             isAutoIncrement = EditorGUILayout.ToggleLeft("AutoIncrement", isAutoIncrement, GUILayout.Width(104));
                                                             GUI.enabled = true;
+
+                                                            if(isPrimaryKey)
+                                                            {
+                                                                isUnique = false;
+                                                                isNotNull = false;
+                                                                GUI.enabled = false;
+                                                            }
                                                             isNotNull = EditorGUILayout.ToggleLeft("NotNull", isNotNull, GUILayout.Width(60));
                                                             isUnique = EditorGUILayout.ToggleLeft("Unique", isUnique, GUILayout.Width(60));
+                                                            GUI.enabled = true;
                                                             bool isDefault = !(isPrimaryKey || isAutoIncrement || isNotNull || isUnique);
                                                             isDefault = EditorGUILayout.ToggleLeft("Default", isDefault, GUILayout.Width(60));
                                                             if (isDefault) isPrimaryKey = isAutoIncrement = isNotNull = isUnique = false;

@@ -11,6 +11,7 @@
 
     public class CheckTable : SyncBase
     {
+        [SQLite3Constraint(SQLite3Constraint.AutoIncrement)]
         [Sync((int)CheckTableEnum.ID)]
         public int ID { get; set; }
 

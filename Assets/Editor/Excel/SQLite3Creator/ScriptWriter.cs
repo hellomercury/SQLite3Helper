@@ -74,11 +74,15 @@ namespace SQLite3Helper.Editor
             {
                 if (InTableData.IsColumnEnables[i])
                 {
+                    if(InTableData.SQLite3Constraints[i] != SQLite3Constraint.Default)
+                        sb.Append("        [SQLite3Constraint(")
+                          .Append(SQLite3Utility.ConvertSQLite3ConstraintEnumToString(InTableData.SQLite3Constraints[i]))
+                          .Append(")]\n");
                     sb.Append("        [Sync((int)").Append(filename).Append("Enum.").Append(InTableData.ColumnName[i]).Append(")]\n")
                     .Append("        public ")
-                  .Append(InTableData.CSharpTypes[i])
+                    .Append(InTableData.CSharpTypes[i])
                     .Append(" ")
-                  .Append(InTableData.ColumnName[i])
+                    .Append(InTableData.ColumnName[i])
                     .Append(0 == i ? " { get; private set; }" : " { get; set; }");
 
                     if (null == InTableData.ColumnDescribes || string.IsNullOrEmpty(InTableData.ColumnDescribes[i]))
@@ -109,7 +113,7 @@ namespace SQLite3Helper.Editor
 
             for (int i = 0; i < length; ++i)
             {
-                if(InTableData.IsColumnEnables[i])
+                if (InTableData.IsColumnEnables[i])
                     sb.Append("            ").Append(InTableData.ColumnName[i])
                         .Append(" = In").Append(InTableData.ColumnName[i])
                         .Append(";\n");
@@ -134,7 +138,7 @@ namespace SQLite3Helper.Editor
 
             for (int i = 1; i < length; ++i)
             {
-                if(InTableData.IsColumnEnables[i])
+                if (InTableData.IsColumnEnables[i])
                     sb.Append("+ \", ").Append(InTableData.ColumnName[i]).Append(" = \" + ").
                         Append(InTableData.ColumnName[i]);
             }

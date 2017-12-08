@@ -20,6 +20,7 @@ namespace SQLite3Helper.DataStruct
     {
         private readonly int hashCode;
 
+        [SQLite3Constraint(SQLite3Constraint.NotNull | SQLite3Constraint.PrimaryKey | SQLite3Constraint.Unique )]
         [Sync((int)ItemEnum.ID)]
         public int ID { get; private set; }  //Item ID
 

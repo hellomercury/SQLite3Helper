@@ -140,20 +140,8 @@ namespace SQLite3Helper
             stringBuilder.Append("SELECT * FROM sqlite_master WHERE type = 'table' AND name = '")
                          .Append(InTableName)
                          .Append("'");
-            SQLite3Statement stmt = ExecuteQuery(stringBuilder.ToString());
-
-            bool isExists = false;
-            if (SQLite3Statement.Zero != stmt)
-            {
-                SQLite3Result result = SQLite3.Step(stmt);
-                if (SQLite3Result.Row == result) isExists = true;
-                else if (SQLite3Result.Error == result) isExists = false;
-                else ShowMsg(SQLite3.GetErrmsg(stmt));
-            }
-
-            SQLite3.Finalize(stmt);
-
-            return isExists;
+            
+            return CheckExists(stringBuilder.ToString());
         }
 
         public bool DataExists(string InTableName, string InProperty, object InValue)
@@ -180,25 +168,30 @@ namespace SQLite3Helper
                          .Append(" = ")
                          .Append(property.Infos[0].GetValue(InObject, null));
 
-            return DataExists(stringBuilder.ToString());
+            return CheckExists(stringBuilder.ToString());
         }
 
         public bool DataExists(string InSQLStatement)
         {
-            SQLite3Statement stmt = ExecuteQuery(InSQLStatement);
+            return CheckExists(InSQLStatement);
+        }
 
-            bool result = false;
+        private bool CheckExists(string InSqlStatement)
+        {
+            SQLite3Statement stmt = ExecuteQuery(InSqlStatement);
+
+            bool isExists = false;
             if (SQLite3Statement.Zero != stmt)
             {
-
-                if (SQLite3Result.Row == SQLite3.Step(stmt)) result = true;
-                else if (SQLite3Result.Done == SQLite3.Step(stmt)) result = false;
+                SQLite3Result result = SQLite3.Step(stmt);
+                if (SQLite3Result.Row == result) isExists = true;
+                else if (SQLite3Result.Error == result) isExists = false;
                 else ShowMsg(SQLite3.GetErrmsg(stmt));
             }
 
             SQLite3.Finalize(stmt);
 
-            return result;
+            return isExists;
         }
 
         /// <summary>

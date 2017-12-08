@@ -127,4 +127,22 @@ namespace SQLite3Helper
         Blob = 4,
         Null = 5
     }
+
+    public static class SQLite3Utility
+    {
+        public static string ConvertSQLite3ConstraintEnumToString(SQLite3Constraint InConstraint)
+        {
+            string result = string.Empty;
+            if ((InConstraint & SQLite3Constraint.PrimaryKey) != 0)
+                result += "SQLite3Constraint.PrimaryKey | ";
+            if ((InConstraint & SQLite3Constraint.Unique) != 0)
+                result += "SQLite3Constraint.Unique | ";
+            if((InConstraint & SQLite3Constraint.AutoIncrement) != 0)
+                result += "SQLite3Constraint.AutoIncrement | ";
+            if ((InConstraint & SQLite3Constraint.NotNull) != 0)
+                result += "SQLite3Constraint.NotNull | ";
+            
+            return result == string.Empty ? string.Empty : result.Remove(result.Length - 2, 2);
+        }
+    }
 }
