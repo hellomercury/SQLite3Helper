@@ -15,17 +15,17 @@ namespace SQLite3Helper
         public static extern SQLite3Result Open([MarshalAs(UnmanagedType.LPStr)] string filename, out IntPtr db);
 
         [DllImport("sqlite3", EntryPoint = "sqlite3_open_v2", CallingConvention = CallingConvention.Cdecl)]
-        public static extern SQLite3Result Open([MarshalAs(UnmanagedType.LPStr)] string filename, out IntPtr db, int flags, IntPtr zvfs);
+        public static extern SQLite3Result Open([MarshalAs(UnmanagedType.LPStr)] string filename, out IntPtr db, int flags, IntPtr zvfs = default(IntPtr));
 
         [DllImport("sqlite3", EntryPoint = "sqlite3_open_v2", CallingConvention = CallingConvention.Cdecl)]
-        public static extern SQLite3Result Open(byte[] filename, out IntPtr db, int flags, IntPtr zvfs);
+        public static extern SQLite3Result Open(byte[] filename, out IntPtr db, int flags, IntPtr zvfs = default(IntPtr));
 
         [DllImport("sqlite3", EntryPoint = "sqlite3_open16", CallingConvention = CallingConvention.Cdecl)]
         public static extern SQLite3Result Open16([MarshalAs(UnmanagedType.LPWStr)] string filename, out IntPtr db);
         #endregion
 
         [DllImport("sqlite3", EntryPoint = "sqlite3_prepare_v2", CallingConvention = CallingConvention.Cdecl)]
-        public static extern SQLite3Result Prepare2(IntPtr db, [MarshalAs(UnmanagedType.LPStr)] string sql, int numBytes, out IntPtr stmt, IntPtr pzTail);
+        public static extern SQLite3Result Prepare2(IntPtr db, [MarshalAs(UnmanagedType.LPStr)] string sql, int numBytes, out IntPtr stmt, IntPtr pzTail = default(IntPtr));
 
         [DllImport("sqlite3", EntryPoint = "sqlite3_column_count", CallingConvention = CallingConvention.Cdecl)]
         public static extern int ColumnCount(IntPtr stmt);

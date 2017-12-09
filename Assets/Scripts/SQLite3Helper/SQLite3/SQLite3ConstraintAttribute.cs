@@ -20,5 +20,20 @@ namespace SQLite3Helper
             if ((InConstraint & SQLite3Constraint.NotNull) == SQLite3Constraint.NotNull)
                 constraint += "NOT NULL ";
         }
+
+        public static string ConvertToString(SQLite3Constraint InConstraint)
+        {
+            string result = string.Empty;
+            if ((InConstraint & SQLite3Constraint.PrimaryKey) != 0)
+                result += "SQLite3Constraint.PrimaryKey | ";
+            if ((InConstraint & SQLite3Constraint.Unique) != 0)
+                result += "SQLite3Constraint.Unique | ";
+            if ((InConstraint & SQLite3Constraint.AutoIncrement) != 0)
+                result += "SQLite3Constraint.AutoIncrement | ";
+            if ((InConstraint & SQLite3Constraint.NotNull) != 0)
+                result += "SQLite3Constraint.NotNull | ";
+
+            return result == string.Empty ? string.Empty : result.Remove(result.Length - 2, 2);
+        }
     }
 }

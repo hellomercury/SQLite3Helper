@@ -8,6 +8,8 @@ namespace SQLite3Helper.Editor
 {
     public class SQLite3Window : EditorWindow
     {
+
+
         private static SQLite3Window window;
         private GUIStyle centerTittleStyle, leftTittleStyle, btnStyle;
         private Vector2 scrollPos;

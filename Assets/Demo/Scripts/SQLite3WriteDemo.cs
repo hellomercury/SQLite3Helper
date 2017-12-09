@@ -30,6 +30,7 @@ public class SQLite3WriteDemo : MonoBehaviour
         GUI.skin.label.fontSize = 32;
         GUI.skin.label.fontStyle = FontStyle.Bold;
 
+        /************************************* Create ***********************************************************/
         if (GUILayout.Button((isCreate ? "V" : ">") + "\tCreate Table."))
         {
             isCreate = !isCreate;
@@ -47,8 +48,8 @@ public class SQLite3WriteDemo : MonoBehaviour
             GUILayout.Space(64);
             if (GUILayout.Button("Create table by sql command"))
             {
-                operate.CreateTable("CREATE TABLE SQLCommandTemp(ID INTEGER PRIMARY KEY, Name TEXT)");
-                Debug.LogError("Create table SQLCommandTemp successed.");
+                if (operate.CreateTable("DROP TABLE IF EXISTS SQLCommandTemp; CREATE TABLE SQLCommandTemp(ID INTEGER PRIMARY KEY, Name TEXT)"))
+                    Debug.LogError("Create table SQLCommandTemp successed.");
             }
             GUILayout.EndHorizontal();
 
@@ -56,8 +57,8 @@ public class SQLite3WriteDemo : MonoBehaviour
             GUILayout.Space(64);
             if (GUILayout.Button("Create table by name and ‘Fields constraints’"))
             {
-                operate.CreateTable("KeyValueTemp", "ID INTEGER PRIMARY KEY", "Name Text");
-                Debug.LogError("Create table KeyValueTemp successed.");
+                if (operate.CreateTable("KeyValueTemp", new string[] { "ID INTEGER PRIMARY KEY", "Name Text" }))
+                    Debug.LogError("Create table KeyValueTemp successed.");
             }
             GUILayout.EndHorizontal();
 
@@ -65,98 +66,13 @@ public class SQLite3WriteDemo : MonoBehaviour
             GUILayout.Space(64);
             if (GUILayout.Button("Create table by subclass of SyncBase."))
             {
-                operate.CreateTable<Item>();
-                Debug.LogError("Create table Item successed.");
+                if (operate.CreateTable<PlayerInfo>())
+                    Debug.LogError("Create table Item successed.");
             }
             GUILayout.EndHorizontal();
         }
 
-        if (GUILayout.Button((isInsert ? "V" : ">") + "\tInsert Data."))
-        {
-            isInsert = !isInsert;
-            if (isInsert)
-            {
-                isCreate = false;
-                isDelete = false;
-                isDrop = false;
-            }
-        }
-
-        if (isInsert)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(64);
-            if (GUILayout.Button("Insert data to table by sql command."))
-            {
-                operate.Insert("INSERT INTO PlayerInfo VALUES(9, 'Szn', 10010008)");
-                Debug.LogError("INSERT INTO PlayerInfo Successed.");
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(64);
-            if (GUILayout.Button("Insert data to table by object."))
-            {
-                PlayerInfo info = new PlayerInfo(10, "Wn", 10010009);
-                operate.InsertT(info);
-                Debug.LogError("INSERT INTO PlayerInfo Successed.");
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(64);
-            if (GUILayout.Button("Insert data to table by objects."))
-            {
-                List<PlayerInfo> infos = new List<PlayerInfo>(3);
-                infos.Add(new PlayerInfo(11, "111", 10010010));
-                infos.Add(new PlayerInfo(12, "222", 10010011));
-                infos.Add(new PlayerInfo(13, "333", 10010012));
-                operate.InsertAllT(infos);
-                Debug.LogError("INSERT INTO PlayerInfo Successed.");
-            }
-            GUILayout.EndHorizontal();
-        }
-
-        if (GUILayout.Button((isDelete ? "V" : ">") + "\tDelete Data"))
-        {
-            isDelete = !isDelete;
-            if (isDelete)
-            {
-                isCreate = false;
-                isInsert = false;
-                isDrop = false;
-            }
-        }
-
-        if (isDelete)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(64);
-            if (GUILayout.Button("Delete single data by table name and id."))
-            {
-                operate.DeleteByID("PlayerInfo", 0);
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(64);
-            if (GUILayout.Button("Delete single data by subclass of SyncBase"))
-            {
-                PlayerInfo info = operate.SelectTByID<PlayerInfo>(1);
-                operate.DeleteT(info);
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(64);
-            if (GUILayout.Button("Delete a table all data."))
-            {
-                operate.DeleteAllT<PlayerInfo>();
-            }
-            GUILayout.EndHorizontal();
-
-        }
-
+        /************************************* Drop ***********************************************************/
         if (GUILayout.Button((isDrop ? "V" : ">") + "\tDrop Table"))
         {
             isDrop = !isDrop;
@@ -174,8 +90,8 @@ public class SQLite3WriteDemo : MonoBehaviour
             GUILayout.Space(64);
             if (GUILayout.Button("Drop table by name"))
             {
-                operate.DropTable("PlayerInfo");
-                Debug.LogError("DROP TABLE PlayerInfo Successed.");
+                if (operate.DropTable("PlayerInfo"))
+                    Debug.LogError("DROP TABLE PlayerInfo Successed.");
             }
             GUILayout.EndHorizontal();
 
@@ -183,10 +99,119 @@ public class SQLite3WriteDemo : MonoBehaviour
             GUILayout.Space(64);
             if (GUILayout.Button("Drop table by subclass of SyncBase"))
             {
-                operate.DropTable<PlayerInfo>();
-                Debug.LogError("DROP TABLE PlayerInfo Successed.");
+                if (operate.DropTable<PlayerInfo>())
+                    Debug.LogError("DROP TABLE PlayerInfo Successed.");
             }
             GUILayout.EndHorizontal();
+        }
+
+        /************************************* Show All Table ***********************************************************/
+        if (GUILayout.Button("Show all table."))
+        {
+
+            List<object[]> objs = operate.SelectObject("name, sql", "sqlite_master",
+                                                     new[] { "type" },
+                                                     new[] { "=" },
+                                                     new[] { "table" });
+            string str = string.Empty;
+            for (int i = 0; i < objs.Count; i++)
+            {
+                for (int j = 0; j < objs[i].Length; j++)
+                {
+                    str += objs[i][j] + ", ";
+                }
+                str += "\n";
+            }
+            Debug.LogError("Tables : \n" + str);
+
+        }
+
+        /************************************* tInsert ***********************************************************/
+        if (GUILayout.Button((isInsert ? "V" : ">") + "\tInsert Data."))
+        {
+            isInsert = !isInsert;
+            if (isInsert)
+            {
+                isCreate = false;
+                isDelete = false;
+                isDrop = false;
+            }
+        }
+
+        if (isInsert)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
+            if (GUILayout.Button("Insert data to table by sql command."))
+            {
+                if (operate.Insert("INSERT INTO PlayerInfo VALUES(9, 'Szn', 10010008)"))
+                    Debug.LogError("INSERT INTO PlayerInfo Successed.");
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
+            if (GUILayout.Button("Insert data to table by object."))
+            {
+                PlayerInfo info = new PlayerInfo(10, "Wn", 10010009);
+                if (operate.InsertT(info))
+                    Debug.LogError("INSERT INTO PlayerInfo Successed.");
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
+            if (GUILayout.Button("Insert data to table by objects."))
+            {
+                List<PlayerInfo> infos = new List<PlayerInfo>(3);
+                infos.Add(new PlayerInfo(11, "111", 10010010));
+                infos.Add(new PlayerInfo(12, "222", 10010011));
+                infos.Add(new PlayerInfo(13, "333", 10010012));
+                if (operate.InsertAllT(infos))
+                    Debug.LogError("INSERT INTO PlayerInfo Successed.");
+            }
+            GUILayout.EndHorizontal();
+        }
+
+        /************************************* Delete ***********************************************************/
+        if (GUILayout.Button((isDelete ? "V" : ">") + "\tDelete Data"))
+        {
+            isDelete = !isDelete;
+            if (isDelete)
+            {
+                isCreate = false;
+                isInsert = false;
+                isDrop = false;
+            }
+        }
+
+        if (isDelete)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
+            if (GUILayout.Button("Delete single data by table name and id."))
+            {
+                if (operate.DeleteByID("PlayerInfo", 0)) Debug.LogError("Delete data with ID = 0.");
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
+            if (GUILayout.Button("Delete single data by subclass of SyncBase"))
+            {
+                PlayerInfo info = operate.SelectTByID<PlayerInfo>(1);
+                if (operate.DeleteT(info)) Debug.LogError("Delete data with ID = 1.");
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
+            if (GUILayout.Button("Delete a table all data."))
+            {
+                if (operate.DeleteAllT<PlayerInfo>()) Debug.LogError("Clear table success.");
+            }
+            GUILayout.EndHorizontal();
+
         }
 
         GUILayout.EndArea();

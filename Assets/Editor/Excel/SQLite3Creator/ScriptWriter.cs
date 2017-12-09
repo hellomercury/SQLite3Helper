@@ -76,7 +76,7 @@ namespace SQLite3Helper.Editor
                 {
                     if(InTableData.SQLite3Constraints[i] != SQLite3Constraint.Default)
                         sb.Append("        [SQLite3Constraint(")
-                          .Append(SQLite3Utility.ConvertSQLite3ConstraintEnumToString(InTableData.SQLite3Constraints[i]))
+                          .Append(SQLite3ConstraintAttribute.ConvertToString(InTableData.SQLite3Constraints[i]))
                           .Append(")]\n");
                     sb.Append("        [Sync((int)").Append(filename).Append("Enum.").Append(InTableData.ColumnName[i]).Append(")]\n")
                     .Append("        public ")

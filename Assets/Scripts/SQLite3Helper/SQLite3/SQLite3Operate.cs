@@ -140,7 +140,7 @@ namespace SQLite3Helper
             stringBuilder.Append("SELECT * FROM sqlite_master WHERE type = 'table' AND name = '")
                          .Append(InTableName)
                          .Append("'");
-            
+
             return CheckExists(stringBuilder.ToString());
         }
 
@@ -178,29 +178,31 @@ namespace SQLite3Helper
 
         private bool CheckExists(string InSqlStatement)
         {
-            SQLite3Statement stmt = ExecuteQuery(InSqlStatement);
+            SQLite3Statement stmt;
 
-            bool isExists = false;
-            if (SQLite3Statement.Zero != stmt)
+            if (ExecuteQuery(InSqlStatement, out stmt))
             {
+                bool isExists = false;
+
                 SQLite3Result result = SQLite3.Step(stmt);
                 if (SQLite3Result.Row == result) isExists = true;
                 else if (SQLite3Result.Error == result) isExists = false;
                 else ShowMsg(SQLite3.GetErrmsg(stmt));
+
+                SQLite3.Finalize(stmt);
+
+                return isExists;
             }
-
-            SQLite3.Finalize(stmt);
-
-            return isExists;
+            return false;
         }
 
         /// <summary>
         /// Creates the table.
         /// </summary>
         /// <param name="InSQLStetement">SQL Statement.</param>
-        public void CreateTable(string InSQLStetement)
+        public bool CreateTable(string InSQLStetement)
         {
-            Exec(InSQLStetement);
+            return Exec(InSQLStetement);
         }
 
         /// <summary>
@@ -208,8 +210,10 @@ namespace SQLite3Helper
         /// </summary>
         /// <param name="InTableName">In table name.</param>
         /// <param name="InColumnNameAndType">In column name and type.</param>
-        public void CreateTable(string InTableName, params string[] InColumnNameAndType)
+        public bool CreateTable(string InTableName, string[] InColumnNameAndType, bool InOverWrite = true)
         {
+            if (InOverWrite) Exec("DROP TABLE IF EXISTS " + InTableName);
+
             stringBuilder.Remove(0, stringBuilder.Length);
             stringBuilder.Append("CREATE TABLE ").Append(InTableName).Append(" (");
             int length = InColumnNameAndType.Length;
@@ -220,18 +224,18 @@ namespace SQLite3Helper
             stringBuilder.Remove(stringBuilder.Length - 2, 2);
             stringBuilder.Append(")");
 
-            Exec(stringBuilder.ToString());
+            return Exec(stringBuilder.ToString());
         }
 
         /// <summary>
         /// Creates the table.
         /// </summary>
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
-        public void CreateTable<T>() where T : SyncBase
+        public bool CreateTable<T>(bool InOverWrite = true) where T : SyncBase
         {
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
 
-            Exec("DROP TABLE IF EXISTS " + property.ClassName);
+            if(InOverWrite) Exec("DROP TABLE IF EXISTS " + property.ClassName);
 
             stringBuilder.Remove(0, stringBuilder.Length);
             stringBuilder.Append("CREATE TABLE ").Append(property.ClassName).Append("(");
@@ -268,16 +272,16 @@ namespace SQLite3Helper
             stringBuilder.Remove(stringBuilder.Length - 2, 2);
             stringBuilder.Append(")");
 
-            Exec(stringBuilder.ToString());
+            return Exec(stringBuilder.ToString());
         }
 
         /// <summary>
         /// Execute insert SQL statement.
         /// </summary>
         /// <param name="InSQLstatement">In SQL statement.</param>
-        public void Insert(string InSQLstatement)
+        public bool Insert(string InSQLstatement)
         {
-            Exec(InSQLstatement);
+            return Exec(InSQLstatement);
         }
 
         /// <summary>
@@ -285,7 +289,7 @@ namespace SQLite3Helper
         /// </summary>
         /// <param name="InTableName">In table name.</param>
         /// <param name="InData">Data inserted to the table.</param>
-        public void Insert(string InTableName, params object[] InData)
+        public bool Insert(string InTableName, params object[] InData)
         {
             stringBuilder.Remove(0, stringBuilder.Length);
             stringBuilder.Append("INSERT INTO ").Append(InTableName).Append(" VALUES(");
@@ -300,7 +304,7 @@ namespace SQLite3Helper
             stringBuilder.Remove(stringBuilder.Length - 2, 2);
             stringBuilder.Append(")");
 
-            Exec(stringBuilder.ToString());
+            return Exec(stringBuilder.ToString());
         }
 
         /// <summary>
@@ -308,7 +312,7 @@ namespace SQLite3Helper
         /// </summary>
         /// <param name="InValue">Subclass of SyncBase object.</param>
         /// <typeparam name="T">Subclass of SyncBase</typeparam>
-        public void InsertT<T>(T InValue) where T : SyncBase
+        public bool InsertT<T>(T InValue) where T : SyncBase
         {
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
 
@@ -328,7 +332,7 @@ namespace SQLite3Helper
             stringBuilder.Remove(stringBuilder.Length - 2, 2);
             stringBuilder.Append(")");
 
-            Exec(stringBuilder.ToString());
+            return Exec(stringBuilder.ToString());
         }
 
         /// <summary>
@@ -336,7 +340,7 @@ namespace SQLite3Helper
         /// </summary>
         /// <param name="InValue">Some SyncBase subclasses list.</param>
         /// <typeparam name="T">subclass of SyncBase.</typeparam>
-        public void InsertAllT<T>(List<T> InValue) where T : SyncBase
+        public bool InsertAllT<T>(List<T> InValue) where T : SyncBase
         {
             if (null == InValue) throw new ArgumentNullException();
             int count = InValue.Count;
@@ -362,18 +366,20 @@ namespace SQLite3Helper
                     stringBuilder.Remove(stringBuilder.Length - 2, 2);
                     stringBuilder.Append(")");
 
-                    Exec(stringBuilder.ToString());
+                    if (!Exec(stringBuilder.ToString())) return false;
                 }
             }
+
+            return true;
         }
 
         /// <summary>
         /// According to the SQL statement to update the table. 
         /// </summary>
         /// <param name="InSQLStatement">In SQL statement.</param>
-        public void Update(string InSQLStatement)
+        public bool Update(string InSQLStatement)
         {
-            Exec(InSQLStatement);
+            return Exec(InSQLStatement);
         }
 
         /// <summary>
@@ -382,7 +388,7 @@ namespace SQLite3Helper
         /// <param name="InTableName">In table name.</param>
         /// <param name="InCondition">Analyzing conditions.</param>
         /// <param name="InData">Data update to the table.</param>
-        public void Update(string InTableName, string InCondition, params string[] InData)
+        public bool Update(string InTableName, string InCondition, params string[] InData)
         {
             if (InData.Length < 1) throw new ArgumentNullException();
 
@@ -397,7 +403,7 @@ namespace SQLite3Helper
             stringBuilder.Remove(stringBuilder.Length - 2, 2);
             stringBuilder.Append(" WHERE ").Append(InCondition);
 
-            Exec(stringBuilder.ToString());
+            return Exec(stringBuilder.ToString());
         }
 
         /// <summary>
@@ -405,7 +411,7 @@ namespace SQLite3Helper
         /// </summary>
         /// <param name="InValue">SyncBase object.</param>
         /// <typeparam name="T">subclass of SyncBase</typeparam>
-        public void UpdateT<T>(T InValue) where T : SyncBase
+        public bool UpdateT<T>(T InValue) where T : SyncBase
         {
             if (null == InValue) throw new ArgumentNullException();
 
@@ -425,7 +431,7 @@ namespace SQLite3Helper
             stringBuilder.Remove(stringBuilder.Length - 2, 2);
             stringBuilder.Append(" WHERE ID = ").Append(property.Infos[0].GetValue(InValue, null));
 
-            Exec(stringBuilder.ToString());
+            return Exec(stringBuilder.ToString());
         }
 
         /// <summary>
@@ -434,7 +440,7 @@ namespace SQLite3Helper
         /// <param name="InIndex">The index of the object property.</param>
         /// <param name="InValue">SyncBase subclass object</param>
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
-        public void UpdateTByKeyValue<T>(int InIndex, T InValue) where T : SyncBase
+        public bool UpdateTByKeyValue<T>(int InIndex, T InValue) where T : SyncBase
         {
             if (null == InValue) throw new ArgumentNullException();
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
@@ -450,7 +456,7 @@ namespace SQLite3Helper
                 .Append("' WHERE ID = ")
                 .Append(property.Infos[0].GetValue(InValue, null));
 
-            Exec(stringBuilder.ToString());
+            return Exec(stringBuilder.ToString());
         }
 
         /// <summary>
@@ -474,67 +480,56 @@ namespace SQLite3Helper
         }
 
         /// <summary>
-        /// According to the ID from the table to read a piece of data.
-        /// </summary>
-        /// <returns>a piece of data.</returns>
-        /// <param name="InTableName">In table name.</param>
-        /// <param name="InID">In ID as table key.</param>
-        public Object[] SelectSingleData(string InTableName, int InID)
-        {
-            if (handle == IntPtr.Zero) throw new NullReferenceException("Please open database first.");
-
-            stringBuilder.Remove(0, stringBuilder.Length);
-            stringBuilder.Append("SELECT * FROM ")
-                .Append(InTableName)
-                .Append(" WHERE ID = ")
-                .Append(InID);
-
-            SQLite3Statement stmt = ExecuteQuery(stringBuilder.ToString());
-            Object[] obj = null;
-            if (SQLite3Statement.Zero != stmt)
-            {
-                SQLite3Result result = SQLite3.Step(stmt);
-                if (SQLite3Result.Row == result)
-                    obj = GetObjects(stmt, SQLite3.ColumnCount(stmt));
-                else if (SQLite3Result.Error == result)
-                {
-                    if (!TableExists(InTableName)) ShowMsg("No such table : " + InTableName);
-                    else ShowMsg(SQLite3.GetErrmsg(stmt));
-                }
-
-            }
-
-            SQLite3.Finalize(stmt);
-
-            return obj;
-        }
-
-        /// <summary>
         /// According to the ID from the table to read multiple data.
+        /// SELECT $InColumnName$ FROM $InTableName$ WHERE 
+        /// $InCompareName$ $InOperator$ $InCondition$ 
+        /// $InConnectOperator$ 
+        /// $InCompareName$ $InOperator$ $InCondition$
+        /// ...
         /// </summary>
-        /// <returns>The multiple data.</returns>
-        /// <param name="InTableName">In table name.</param>
+        /// <returns>Results from the database query.</returns>
         /// <param name="InColumnName">In column name.</param>
+        /// <param name="InTableName">In table name.</param>
+        /// <param name="InCompareName">In compare name.</param>
         /// <param name="InOperator">In Operator</param>
         /// <param name="InCondition">In condition.</param>
-        public List<Object[]> SelectMultiData(string InTableName, string InColumnName, string InOperator, string InCondition)
+        /// <param name="InConnectOperator">In connect operator.</param>
+        public List<Object[]> SelectObject(string InColumnName, string InTableName,
+                                              string[] InCompareName, string[] InOperator, string[] InCondition,
+                                           string[] InConnectOperator = null)
         {
+            int length = InCompareName.Length;
+            int connectLength = InConnectOperator == null ? 0 : InConnectOperator.Length;
+            if (length != InOperator.Length || length != InCondition.Length || length - 1 != connectLength)
+                throw new ArgumentException("Parameter length does not match.");
+
             stringBuilder.Remove(0, stringBuilder.Length);
             stringBuilder.Append("SELECT ")
-                .Append(InColumnName)
-                .Append(" FROM ")
-                .Append(InTableName)
-                .Append(" WHERE ")
-                .Append(InOperator)
-                .Append(" ")
-                .Append(InCondition);
+                         .Append(InColumnName)
+                         .Append(" FROM ")
+                         .Append(InTableName)
+                         .Append(" WHERE ");
 
-            SQLite3Statement stmt = ExecuteQuery(stringBuilder.ToString());
-
-            List<Object[]> obj = null;
-            if (SQLite3Statement.Zero != stmt)
+            for (int i = 0; i < length; i++)
             {
-                obj = new List<object[]>();
+                stringBuilder.Append(InCompareName[i])
+                        .Append(" ")
+                        .Append(InOperator[i])
+                        .Append(" '")
+                        .Append(InCondition[i])
+                        .Append("'");
+                if (i < connectLength) stringBuilder.Append(" ")
+                                                    .Append(InConnectOperator[i])
+                                                    .Append(" ");
+            }
+
+
+
+            SQLite3Statement stmt;
+
+            if (ExecuteQuery(stringBuilder.ToString(), out stmt))
+            {
+                List<Object[]> obj = new List<object[]>();
                 int count = SQLite3.ColumnCount(stmt);
                 SQLite3Result sqlite3Result;
                 while (true)
@@ -551,12 +546,15 @@ namespace SQLite3Helper
                         break;
                     }
                 }
+
+                SQLite3.Finalize(stmt);
+
+                return obj;
             }
-
-            SQLite3.Finalize(stmt);
-
-            return obj;
+            else return null;
         }
+
+
 
         /// <summary>
         /// Resolve the database results.
@@ -677,11 +675,11 @@ namespace SQLite3Helper
         {
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
 
-            SQLite3Statement stmt = ExecuteQuery(InSQLStatement);
+            SQLite3Statement stmt;
 
-            T t = default(T);
-            if (SQLite3Statement.Zero != stmt)
+            if (ExecuteQuery(InSQLStatement, out stmt))
             {
+                T t = default(T);
                 SQLite3Result result = SQLite3.Step(stmt);
                 if (SQLite3Result.Row == result)
                     t = GetT(new T(), property.Infos, stmt, property.InfosLength);
@@ -690,11 +688,12 @@ namespace SQLite3Helper
                     if (!TableExists(property.ClassName)) ShowMsg("No such table : " + property.ClassName);
                     else ShowMsg(SQLite3.GetErrmsg(stmt));
                 }
+
+                SQLite3.Finalize(stmt);
+
+                return t;
             }
-
-            SQLite3.Finalize(stmt);
-
-            return t;
+            else return default(T);
         }
 
         /// <summary>
@@ -765,12 +764,10 @@ namespace SQLite3Helper
                 .Append(" WHERE ")
                 .Append(InSQLStatement);
 
-            SQLite3Statement stmt = ExecuteQuery(stringBuilder.ToString());
-
-            Dictionary<int, T> resultDict = null;
-            if (SQLite3Statement.Zero != stmt)
+            SQLite3Statement stmt;
+            if (ExecuteQuery(stringBuilder.ToString(), out stmt))
             {
-                resultDict = new Dictionary<int, T>();
+                Dictionary<int, T> resultDict = new Dictionary<int, T>();
                 int count = SQLite3.ColumnCount(stmt), id;
                 SQLite3Result result;
                 while (true)
@@ -790,10 +787,12 @@ namespace SQLite3Helper
                         break;
                     }
                 }
-            }
-            SQLite3.Finalize(stmt);
 
-            return resultDict;
+                SQLite3.Finalize(stmt);
+
+                return resultDict;
+            }
+            else return null;
         }
 
         /// <summary>
@@ -864,12 +863,10 @@ namespace SQLite3Helper
                          .Append(InCondition);
 
 
-            SQLite3Statement stmt = ExecuteQuery(stringBuilder.ToString());
-
-            List<T> resultList = null;
-            if (SQLite3Statement.Zero == stmt)
+            SQLite3Statement stmt;
+            if (ExecuteQuery(stringBuilder.ToString(), out stmt))
             {
-                resultList = new List<T>();
+                List<T> resultList = new List<T>();
                 SQLite3Result sqlite3Result;
                 int count = SQLite3.ColumnCount(stmt);
                 while (true)
@@ -885,10 +882,11 @@ namespace SQLite3Helper
                         break;
                     }
                 }
-            }
-            SQLite3.Finalize(stmt);
+                SQLite3.Finalize(stmt);
 
-            return resultList.ToArray();
+                return resultList.ToArray();
+            }
+            else return null;
         }
 
         /// <summary>
@@ -937,7 +935,7 @@ namespace SQLite3Helper
         /// </summary>
         /// <param name="InTableName">In table name.</param>
         /// <param name="InID">In identifier of data.</param>
-        public void DeleteByID(string InTableName, int InID)
+        public bool DeleteByID(string InTableName, int InID)
         {
             stringBuilder.Remove(0, stringBuilder.Length);
             stringBuilder.Append("DELETE FROM ")
@@ -945,36 +943,44 @@ namespace SQLite3Helper
                 .Append(" WHERE ID = ")
                 .Append(InID);
 
-            Exec(stringBuilder.ToString());
+            bool result = Exec(stringBuilder.ToString());
 
             Exec("VACUUM");    //rebuild the built-in index.
+
+            return result;
         }
 
         /// <summary>
         /// Deletes the data by SyncBase subclass object.
         /// </summary>
-        /// <param name="InID">In Subclass object id.</param>
+        /// <param name="InValue">In Subclass object id.</param>
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
-        public void DeleteT<T>(T InID) where T : SyncBase
+        public bool DeleteT<T>(T InValue) where T : SyncBase
         {
-            SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
+            if(null != InValue)
+            {
+                SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
 
-            stringBuilder.Remove(0, stringBuilder.Length);
-            stringBuilder.Append("DELETE FROM ")
-                .Append(property.ClassName)
-                .Append(" WHERE ID = ")
-                .Append(property.Infos[0].GetValue(InID, null));
+                stringBuilder.Remove(0, stringBuilder.Length);
+                stringBuilder.Append("DELETE FROM ")
+                    .Append(property.ClassName)
+                    .Append(" WHERE ID = ")
+                    .Append(property.Infos[0].GetValue(InValue, null));
 
-            Exec(stringBuilder.ToString());
+                bool result = Exec(stringBuilder.ToString());
 
-            Exec("VACUUM");    //rebuild the built-in index.
+                Exec("VACUUM");    //rebuild the built-in index.
+
+                return result;
+            }
+            return false;
         }
 
         /// <summary>
         /// Clear table data by SyncBase of subclass.
         /// </summary>
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
-        public void DeleteAllT<T>() where T : SyncBase
+        public bool DeleteAllT<T>() where T : SyncBase
         {
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
 
@@ -982,35 +988,33 @@ namespace SQLite3Helper
             stringBuilder.Append("DELETE FROM ")
                 .Append(property.ClassName);
 
-            Exec(stringBuilder.ToString());
+            bool result = Exec(stringBuilder.ToString());
 
             Exec("VACUUM");    //rebuild the built-in index.
+
+            return result;
         }
 
         /// <summary>
         /// Drop the table.
         /// </summary>
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
-        public void DropTable<T>()
+        public bool DropTable<T>()
         {
-            DropTable(SyncFactory.GetSyncProperty(typeof(T)).ClassName);
+            return DropTable(SyncFactory.GetSyncProperty(typeof(T)).ClassName);
         }
 
         /// <summary>
         /// Drop the table.
         /// </summary>
         /// <param name="InTableName">In table name.</param>
-        public void DropTable(string InTableName)
+        public bool DropTable(string InTableName)
         {
             stringBuilder.Remove(0, stringBuilder.Length);
-            stringBuilder.Append("DROP TABLE ")
+            stringBuilder.Append("DROP TABLE IF EXISTS ")
                          .Append(InTableName);
 
-            Exec(stringBuilder.ToString(), stmt =>
-            {
-                if (!TableExists(InTableName)) ShowMsg("No such table : " + InTableName);
-                else ShowMsg(SQLite3.GetErrmsg(stmt));
-            });
+            return Exec(stringBuilder.ToString());
         }
 
         /// <summary>
@@ -1018,17 +1022,17 @@ namespace SQLite3Helper
         /// </summary>
         /// <returns>the address of sqlite3.</returns>
         /// <param name="InSQLStatement">In sql statement.</param>
-        private SQLite3Statement ExecuteQuery(string InSQLStatement)
+        private bool ExecuteQuery(string InSQLStatement, out SQLite3Statement OutStmt)
         {
-            SQLite3Statement stmt = IntPtr.Zero;
 
-            if (SQLite3Result.OK != SQLite3.Prepare2(handle, InSQLStatement, GetUTF8ByteCount(InSQLStatement), out stmt, IntPtr.Zero))
+            if (SQLite3Result.OK != SQLite3.Prepare2(handle, InSQLStatement, GetUTF8ByteCount(InSQLStatement), out OutStmt))
             {
-                ShowMsg(InSQLStatement + "\nError: " + SQLite3.GetErrmsg(stmt));
-                SQLite3.Finalize(stmt);
-            }
+                ShowMsg(InSQLStatement + "\nError: " + SQLite3.GetErrmsg(OutStmt));
+                SQLite3.Finalize(OutStmt);
 
-            return stmt;
+                return false;
+            }
+            else return true;
         }
 
         /// <summary>
@@ -1036,21 +1040,28 @@ namespace SQLite3Helper
         /// </summary>
         /// <returns>The exec.</returns>
         /// <param name="InSQLStatement">In SQL Statement.</param>
-        public void Exec(string InSQLStatement, Action<SQLite3Statement> InErrorAction = null)
+        public bool Exec(string InSQLStatement)
         {
+            bool result = true;
             SQLite3Statement stmt;
 
-            SQLite3Result result = SQLite3.Prepare2(handle, InSQLStatement, GetUTF8ByteCount(InSQLStatement), out stmt, IntPtr.Zero);
-            if (SQLite3Result.OK == result)
+            if (SQLite3Result.OK == SQLite3.Prepare2(handle, InSQLStatement, GetUTF8ByteCount(InSQLStatement), out stmt))
             {
                 if (SQLite3Result.Done != SQLite3.Step(stmt))
-                    if (null == InErrorAction) ShowMsg(SQLite3.GetErrmsg(stmt));
-                    else InErrorAction.Invoke(stmt);
+                {
+                    ShowMsg(SQLite3.GetErrmsg(stmt));
+                    result = false;
+                }
             }
-            else ShowMsg(SQLite3.GetErrmsg(stmt));
-
+            else
+            {
+                ShowMsg(SQLite3.GetErrmsg(stmt));
+                result = false;
+            }
 
             SQLite3.Finalize(stmt);
+
+            return result;
         }
 
         /// <summary>
