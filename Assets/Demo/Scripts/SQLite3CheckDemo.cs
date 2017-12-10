@@ -11,7 +11,7 @@ public class SQLite3CheckDemo : MonoBehaviour
     SQLite3Operate operate;
     void Start()
     {
-        operate = SQLite3Operate.CreateAndWrite("CheckDemo.db");
+        operate = SQLite3Operate.CreateAndWrite("Static.db");
 
         Application.logMessageReceived += (condition, stackTrace, type) =>
         {
@@ -21,7 +21,7 @@ public class SQLite3CheckDemo : MonoBehaviour
 
     string log = string.Empty;
     Vector2 scrollPos = Vector2.zero;
-    bool isSelectSingleData = false, isSelectArrayData = false, isSelectDictData;
+    bool isSelectSingleData = false;
     void OnGUI()
     {
         GUILayout.BeginArea(new Rect(0, 0, Screen.width / 3.0f, Screen.height));
@@ -33,15 +33,19 @@ public class SQLite3CheckDemo : MonoBehaviour
         if (GUILayout.Button((isSelectSingleData ? "V" : ">") + "\tCheck table exists."))
         {
             isSelectSingleData = !isSelectSingleData;
-            if (isSelectSingleData)
-            {
-                isSelectArrayData = false;
-                isSelectDictData = false;
-            }
         }
 
         if (isSelectSingleData)
         {
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
+            if (GUILayout.Button("Check table exists by table name."))
+            {
+                PlayerInfo info = operate.SelectTByID<PlayerInfo>(6);
+                Debug.LogError(info);
+            }
+            GUILayout.EndHorizontal();
+
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
             if (GUILayout.Button("Check table exists by table name."))
@@ -77,119 +81,6 @@ public class SQLite3CheckDemo : MonoBehaviour
             GUILayout.EndHorizontal();
         }
 
-        if (GUILayout.Button((isSelectArrayData ? "V" : ">") + "\tSelect array data"))
-        {
-            isSelectArrayData = !isSelectArrayData;
-            if (isSelectArrayData)
-            {
-                isSelectSingleData = false;
-                isSelectDictData = false;
-            }
-        }
-
-        if (isSelectArrayData)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item Array by Indexes"))
-            {
-                Profiler.BeginSample("3");
-                Item[] items = operate.SelectArrayT<Item>(new int[] { (int)ItemEnum.ID }, new string[] { ">" }, new object[] { 20300001 });
-                Profiler.EndSample();
-                Debug.LogError("/*-SELECT * FROM Item WHERE ID > 20300001.-*/");
-                foreach (var itor in items)
-                {
-                    Debug.LogError(itor);
-                }
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item Dictionary by Name"))
-            {
-                Profiler.BeginSample("4");
-                Item[] items = operate.SelectArrayT<Item>(new string[] { ItemEnum.ID.ToString() }, new string[] { ">" }, new object[] { 20300001 });
-                Profiler.EndSample();
-                Debug.LogError("/*-SELECT * FROM Item WHERE ID > 20300001.-*/");
-                foreach (var itor in items)
-                {
-                    Debug.LogError(itor);
-                }
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item Array by sql command"))
-            {
-                Profiler.BeginSample("5");
-                Item[] items = operate.SelectArrayT<Item>("ID > 20300001 AND ID < 20300004");
-                Profiler.EndSample();
-                Debug.LogError("/*-SELECT * FROM Item WHERE ID > 20300001 AND ID < 20300004.-*/");
-                foreach (var itor in items)
-                {
-                    Debug.LogError(itor);
-                }
-            }
-            GUILayout.EndHorizontal();
-
-        }
-
-        if (GUILayout.Button((isSelectDictData ? "V" : ">") + "\tSelect Dictionary data"))
-        {
-            isSelectDictData = !isSelectDictData;
-            if (isSelectDictData)
-            {
-                isSelectSingleData = false;
-                isSelectArrayData = false;
-            }
-        }
-
-        if (isSelectDictData)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item Dictionary by ID"))
-            {
-                Profiler.BeginSample("6");
-                Dictionary<int, Item> itemDict = operate.SelectDictT<Item>(new int[] { (int)ItemEnum.ID }, new string[] { ">" }, new object[] { 20300001 });
-                Profiler.EndSample();
-                foreach (var itor in itemDict)
-                {
-                    Debug.LogError(itor.Key + ":" + itor.Value);
-                }
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item Dictionary by Name"))
-            {
-                Profiler.BeginSample("7");
-                Dictionary<int, Item> itemDict = operate.SelectDictT<Item>(new string[] { ItemEnum.ID.ToString() }, new string[] { ">" }, new object[] { 20300001 });
-                Profiler.EndSample();
-                foreach (var itor in itemDict)
-                {
-                    Debug.LogError(itor.Key + ":" + itor.Value);
-                }
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item Dictionary by sql command"))
-            {
-                Profiler.BeginSample("8");
-                Dictionary<int, Item> itemDict = operate.SelectDictT<Item>("ID >  20300001 AND ID < 20300004");
-                Profiler.EndSample();
-                foreach (var itor in itemDict)
-                {
-                    Debug.LogError(itor.Key + ":" + itor.Value);
-                }
-            }
-            GUILayout.EndHorizontal();
-        }
 
         GUILayout.EndArea();
 

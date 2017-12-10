@@ -152,6 +152,7 @@ namespace SQLite3Helper.DataStruct
                     return desArray;
                 }
             }
+            else if(InType.IsClass) return Convert.ChangeType(InValue, InType);
             else 
             {
                 throw new FormatException("Cannot convert dat format,please contact author to expand.");

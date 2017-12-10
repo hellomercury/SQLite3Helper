@@ -46,7 +46,7 @@ public class SQLite3WriteDemo : MonoBehaviour
         {
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Create table by sql command"))
+            if (GUILayout.Button("Create by sql command"))
             {
                 if (operate.CreateTable("DROP TABLE IF EXISTS SQLCommandTemp; CREATE TABLE SQLCommandTemp(ID INTEGER PRIMARY KEY, Name TEXT)"))
                     Debug.LogError("Create table SQLCommandTemp successed.");
@@ -55,7 +55,7 @@ public class SQLite3WriteDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Create table by name and ‘Fields constraints’"))
+            if (GUILayout.Button("Create by name and ‘Fields constraints’"))
             {
                 if (operate.CreateTable("KeyValueTemp", new string[] { "ID INTEGER PRIMARY KEY", "Name Text" }))
                     Debug.LogError("Create table KeyValueTemp successed.");
@@ -64,7 +64,7 @@ public class SQLite3WriteDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Create table by subclass of SyncBase."))
+            if (GUILayout.Button("Create by subclass of SyncBase."))
             {
                 if (operate.CreateTable<PlayerInfo>())
                     Debug.LogError("Create table Item successed.");
@@ -88,7 +88,7 @@ public class SQLite3WriteDemo : MonoBehaviour
         {
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Drop table by name"))
+            if (GUILayout.Button("Drop by name"))
             {
                 if (operate.DropTable("PlayerInfo"))
                     Debug.LogError("DROP TABLE PlayerInfo Successed.");
@@ -97,7 +97,7 @@ public class SQLite3WriteDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Drop table by subclass of SyncBase"))
+            if (GUILayout.Button("Drop by subclass of SyncBase"))
             {
                 if (operate.DropTable<PlayerInfo>())
                     Debug.LogError("DROP TABLE PlayerInfo Successed.");
@@ -142,7 +142,7 @@ public class SQLite3WriteDemo : MonoBehaviour
         {
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Insert data to table by sql command."))
+            if (GUILayout.Button("Insert by sql command."))
             {
                 if (operate.Insert("INSERT INTO PlayerInfo VALUES(9, 'Szn', 10010008)"))
                     Debug.LogError("INSERT INTO PlayerInfo Successed.");
@@ -151,9 +151,9 @@ public class SQLite3WriteDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Insert data to table by object."))
+            if (GUILayout.Button("Insert by object."))
             {
-                PlayerInfo info = new PlayerInfo(10, "Wn", 10010009);
+                PlayerInfo info = new PlayerInfo(10, "Wn", 10010009, true);
                 if (operate.InsertT(info))
                     Debug.LogError("INSERT INTO PlayerInfo Successed.");
             }
@@ -161,12 +161,12 @@ public class SQLite3WriteDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Insert data to table by objects."))
+            if (GUILayout.Button("Insert by objects."))
             {
                 List<PlayerInfo> infos = new List<PlayerInfo>(3);
-                infos.Add(new PlayerInfo(11, "111", 10010010));
-                infos.Add(new PlayerInfo(12, "222", 10010011));
-                infos.Add(new PlayerInfo(13, "333", 10010012));
+                infos.Add(new PlayerInfo(11, "111", 10010010, true));
+                infos.Add(new PlayerInfo(12, "222", 10010011, false));
+                infos.Add(new PlayerInfo(13, "333", 10010012, true));
                 if (operate.InsertAllT(infos))
                     Debug.LogError("INSERT INTO PlayerInfo Successed.");
             }
@@ -189,7 +189,7 @@ public class SQLite3WriteDemo : MonoBehaviour
         {
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Delete single data by table name and id."))
+            if (GUILayout.Button("Delete by table name and id."))
             {
                 if (operate.DeleteByID("PlayerInfo", 0)) Debug.LogError("Delete data with ID = 0.");
             }
@@ -197,7 +197,7 @@ public class SQLite3WriteDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Delete single data by subclass of SyncBase"))
+            if (GUILayout.Button("Delete by subclass of SyncBase"))
             {
                 PlayerInfo info = operate.SelectTByID<PlayerInfo>(1);
                 if (operate.DeleteT(info)) Debug.LogError("Delete data with ID = 1.");
@@ -206,7 +206,7 @@ public class SQLite3WriteDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Delete a table all data."))
+            if (GUILayout.Button("Delete all data."))
             {
                 if (operate.DeleteAllT<PlayerInfo>()) Debug.LogError("Clear table success.");
             }
@@ -216,7 +216,7 @@ public class SQLite3WriteDemo : MonoBehaviour
 
         GUILayout.EndArea();
 
-        GUILayout.BeginArea(new Rect(Screen.width / 3, 0, Screen.width * 2 / 2, Screen.height));
+        GUILayout.BeginArea(new Rect(Screen.width / 3.0f, 0, Screen.width * 2 / 3.0f, Screen.height));
         scrollPos = GUILayout.BeginScrollView(scrollPos);
         GUILayout.Label(log);
         GUILayout.EndScrollView();

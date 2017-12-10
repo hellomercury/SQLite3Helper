@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace SQLite3Helper.DataStruct
 {
@@ -9,16 +8,11 @@ namespace SQLite3Helper.DataStruct
 
         private Dictionary<string, DlgtPropertyChanged> propertyChangedDict;
 
-        private SyncFactory factory;
-
-        private Type type;
-
+        protected SyncFactory factory;
 
         protected SyncBase()
         {
-            type = GetType();
-
-            factory = SyncFactory.GetOrCreateSyncFactory(type);
+            factory = SyncFactory.GetOrCreateSyncFactory(GetType());
 
             propertyChangedDict = new Dictionary<string, DlgtPropertyChanged>();
         }

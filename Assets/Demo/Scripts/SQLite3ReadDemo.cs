@@ -30,7 +30,7 @@ public class SQLite3ReadDemo : MonoBehaviour
         GUI.skin.label.fontSize = 32;
         GUI.skin.label.fontStyle = FontStyle.Bold;
 
-        if (GUILayout.Button((isSelectSingleData ? "V" : ">") + "  Select * From Item Get Single Data."))
+        if (GUILayout.Button((isSelectSingleData ? "V" : ">") + "\tSelect * From Item Get Single Data."))
         {
             isSelectSingleData = !isSelectSingleData;
             if(isSelectSingleData)
@@ -44,7 +44,7 @@ public class SQLite3ReadDemo : MonoBehaviour
         {
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button(" By ID"))
+            if (GUILayout.Button("Get Item By ID"))
             {
                 Item item = operate.SelectTByID<Item>(20300001);
                 Debug.LogError(item);
@@ -55,7 +55,7 @@ public class SQLite3ReadDemo : MonoBehaviour
             GUILayout.Space(64);
             //Only in the absence of primary key or primary key type is not an integer
             //GUILayout.Label("SELECT * FROM Item by index only in the absence of primary key or primary key type is not an integer");
-            if (GUILayout.Button("Select * From Item By Index"))
+            if (GUILayout.Button("Get Item By Index"))
             {
                 Profiler.BeginSample("0");
                 Item item = operate.SelectTByIndex<Item>(1);
@@ -67,7 +67,7 @@ public class SQLite3ReadDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item By KeyValue"))
+            if (GUILayout.Button("Get Item By KeyValue"))
             {
                 Profiler.BeginSample("1");
                 Item item = operate.SelectTByKeyValue<Item>((int)ItemEnum.ID, 20300001);
@@ -78,7 +78,7 @@ public class SQLite3ReadDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item By ID"))
+            if (GUILayout.Button("Get Item By ID"))
             {
                 Profiler.BeginSample("2");
                 Item item = operate.SelectTByKeyValue<Item>(ItemEnum.Name.ToString(), "Laser Gun");
@@ -102,7 +102,7 @@ public class SQLite3ReadDemo : MonoBehaviour
         {
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item Array by Indexes"))
+            if (GUILayout.Button("Get Array by Indexes"))
             {
                 Profiler.BeginSample("3");
                 Item[] items = operate.SelectArrayT<Item>(new int[] { (int)ItemEnum.ID }, new string[] { ">" }, new object[] { 20300001 });
@@ -117,7 +117,7 @@ public class SQLite3ReadDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item Dictionary by Name"))
+            if (GUILayout.Button("Get Dictionary by Name"))
             {
                 Profiler.BeginSample("4");
                 Item[] items = operate.SelectArrayT<Item>(new string[] { ItemEnum.ID.ToString() }, new string[] { ">" }, new object[] { 20300001 });
@@ -132,7 +132,7 @@ public class SQLite3ReadDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item Array by sql command"))
+            if (GUILayout.Button("Get Array by sql command"))
             {
                 Profiler.BeginSample("5");
                 Item[] items = operate.SelectArrayT<Item>("ID > 20300001 AND ID < 20300004");
@@ -161,7 +161,7 @@ public class SQLite3ReadDemo : MonoBehaviour
         {
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item Dictionary by ID"))
+            if (GUILayout.Button("Get Dictionary by ID"))
             {
                 Profiler.BeginSample("6");
                 Dictionary<int, Item> itemDict = operate.SelectDictT<Item>(new int[] { (int)ItemEnum.ID }, new string[] { ">" }, new object[] { 20300001 });
@@ -175,7 +175,7 @@ public class SQLite3ReadDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item Dictionary by Name"))
+            if (GUILayout.Button("Get Dictionary by Name"))
             {
                 Profiler.BeginSample("7");
                 Dictionary<int, Item> itemDict = operate.SelectDictT<Item>(new string[] { ItemEnum.ID.ToString() }, new string[] { ">" }, new object[] { 20300001 });
@@ -189,7 +189,7 @@ public class SQLite3ReadDemo : MonoBehaviour
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);
-            if (GUILayout.Button("Select * From Item Dictionary by sql command"))
+            if (GUILayout.Button("Get Dictionary by sql command"))
             {
                 Profiler.BeginSample("8");
                 Dictionary<int, Item> itemDict = operate.SelectDictT<Item>("ID >  20300001 AND ID < 20300004");

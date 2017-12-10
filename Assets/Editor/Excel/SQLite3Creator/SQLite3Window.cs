@@ -86,7 +86,7 @@ namespace SQLite3Helper.Editor
         private string dataPath;
         private PathConfig config, singlePathConfig, multiPathConfig;
 
-        [MenuItem("Framework/SQLite3 Window %&z")]
+        [MenuItem("Tools/SQLite3 Window %&z")]
         static void Init()
         {
             window = CreateInstance<SQLite3Window>();

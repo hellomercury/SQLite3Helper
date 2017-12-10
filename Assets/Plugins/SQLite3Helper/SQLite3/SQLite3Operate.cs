@@ -235,7 +235,7 @@ namespace SQLite3Helper
         {
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
 
-            if(InOverWrite) Exec("DROP TABLE IF EXISTS " + property.ClassName);
+            if (InOverWrite) Exec("DROP TABLE IF EXISTS " + property.ClassName);
 
             stringBuilder.Remove(0, stringBuilder.Length);
             stringBuilder.Append("CREATE TABLE ").Append(property.ClassName).Append("(");
@@ -493,13 +493,13 @@ namespace SQLite3Helper
         /// <param name="InCompareName">In compare name.</param>
         /// <param name="InOperator">In Operator</param>
         /// <param name="InCondition">In condition.</param>
-        /// <param name="InConnectOperator">In connect operator.</param>
+        /// <param name="InConnectOperators">In connect operator.</param>
         public List<Object[]> SelectObject(string InColumnName, string InTableName,
                                               string[] InCompareName, string[] InOperator, string[] InCondition,
-                                           string[] InConnectOperator = null)
+                                           string[] InConnectOperators = null)
         {
             int length = InCompareName.Length;
-            int connectLength = InConnectOperator == null ? 0 : InConnectOperator.Length;
+            int connectLength = InConnectOperators == null ? 0 : InConnectOperators.Length;
             if (length != InOperator.Length || length != InCondition.Length || length - 1 != connectLength)
                 throw new ArgumentException("Parameter length does not match.");
 
@@ -518,9 +518,10 @@ namespace SQLite3Helper
                         .Append(" '")
                         .Append(InCondition[i])
                         .Append("'");
-                if (i < connectLength) stringBuilder.Append(" ")
-                                                    .Append(InConnectOperator[i])
-                                                    .Append(" ");
+                if (i < connectLength)
+                    stringBuilder.Append(" ")
+                                 .Append(InConnectOperators[i])
+                                 .Append(" ");
             }
 
 
@@ -704,11 +705,15 @@ namespace SQLite3Helper
         /// <param name="InOperators">Operators between properties and expected values.</param>
         /// <param name="InExpectedValues">Expected values.</param>
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
-        public Dictionary<int, T> SelectDictT<T>(int[] InIndexes, string[] InOperators, object[] InExpectedValues) where T : SyncBase, new()
+        /// <param name="InConnectOperators">In connect operator.</param>
+        public Dictionary<int, T> SelectDictT<T>(int[] InIndexes, string[] InOperators, object[] InExpectedValues,
+                                                 string[] InConnectOperators = null) where T : SyncBase, new()
         {
             if (null == InIndexes || null == InOperators || null == InExpectedValues) throw new ArgumentNullException();
             int length = InIndexes.Length;
-            if (length != InOperators.Length || length != InExpectedValues.Length) throw new ArgumentException("Parameter length does not match.");
+            int connectLength = InConnectOperators == null ? 0 : InConnectOperators.Length;
+            if (length != InOperators.Length || length != InExpectedValues.Length || length - 1 != connectLength)
+                throw new ArgumentException("Parameter length does not match.");
 
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
             string[] propertyNames = new string[length];
@@ -717,7 +722,7 @@ namespace SQLite3Helper
                 propertyNames[i] = property.Infos[InIndexes[i]].Name;
             }
 
-            return SelectDictT<T>(propertyNames, InOperators, InExpectedValues);
+            return SelectDictT<T>(propertyNames, InOperators, InExpectedValues, InConnectOperators);
         }
 
         /// <summary>
@@ -728,22 +733,30 @@ namespace SQLite3Helper
         /// <param name="InOperators">Operators between properties and expected values.</param>
         /// <param name="InExpectedValues">Expected values.</param>
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
-        public Dictionary<int, T> SelectDictT<T>(string[] InPropertyNames, string[] InOperators, object[] InExpectedValues) where T : SyncBase, new()
+        /// <param name="InConnectOperators">In connect operator.</param>
+        public Dictionary<int, T> SelectDictT<T>(string[] InPropertyNames, string[] InOperators, object[] InExpectedValues,
+                                                 string[] InConnectOperators = null) where T : SyncBase, new()
         {
-            if (null == InPropertyNames || null == InOperators || null == InExpectedValues) throw new ArgumentNullException();
+            if (null == InPropertyNames || null == InOperators || null == InExpectedValues)
+                throw new ArgumentNullException();
             int length = InPropertyNames.Length;
-            if (length != InOperators.Length || length != InExpectedValues.Length) throw new ArgumentException("Parameter length does not match.");
+            int connectLength = InConnectOperators == null ? 0 : InConnectOperators.Length;
+            if (length != InOperators.Length || length != InExpectedValues.Length || length - 1 != connectLength)
+                throw new ArgumentException("Parameter length does not match.");
 
+            stringBuilder.Remove(0, stringBuilder.Length);
             for (int i = 0; i < length; i++)
             {
                 stringBuilder.Append(InPropertyNames[i])
                              .Append(" ")
                              .Append(InOperators[i])
                              .Append(" ")
-                             .Append(InExpectedValues[i])
-                             .Append(" AND ");
+                             .Append(InExpectedValues[i]);
+                if (i < connectLength)
+                    stringBuilder.Append(" ")
+                                 .Append(InConnectOperators[i])
+                                 .Append(" ");
             }
-            stringBuilder.Remove(stringBuilder.Length - 5, 5);
 
             return SelectDictT<T>(stringBuilder.ToString());
         }
@@ -824,11 +837,15 @@ namespace SQLite3Helper
         /// <param name="InOperators">Operators between properties and expected values.</param>
         /// <param name="InExpectedValues">Expected values.</param>
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
-        public T[] SelectArrayT<T>(string[] InPropertyNames, string[] InOperators, object[] InExpectedValues) where T : SyncBase, new()
+        /// <param name="InConnectOperators">In connect operator.</param>
+        public T[] SelectArrayT<T>(string[] InPropertyNames, string[] InOperators, object[] InExpectedValues,
+                                   string[] InConnectOperators = null) where T : SyncBase, new()
         {
             if (null == InPropertyNames || null == InOperators || null == InExpectedValues) throw new ArgumentNullException();
             int length = InPropertyNames.Length;
-            if (length != InOperators.Length || length != InExpectedValues.Length) throw new ArgumentException("Parameter length does not match.");
+            int connectLength = null == InConnectOperators ? 0 : InConnectOperators.Length;
+            if (length != InOperators.Length || length != InExpectedValues.Length || length - 1 != connectLength)
+                throw new ArgumentException("Parameter length does not match.");
 
             stringBuilder.Remove(0, stringBuilder.Length);
             for (int i = 0; i < length; i++)
@@ -837,10 +854,12 @@ namespace SQLite3Helper
                              .Append(" ")
                              .Append(InOperators[i])
                              .Append(" ")
-                             .Append(InExpectedValues[i])
-                             .Append(" AND ");
+                             .Append(InExpectedValues[i]);
+                if (i < connectLength)
+                    stringBuilder.Append(" ")
+                                 .Append(InConnectOperators[i])
+                                 .Append(" ");
             }
-            stringBuilder.Remove(stringBuilder.Length - 5, 5);
 
             return SelectArrayT<T>(stringBuilder.ToString());
         }
@@ -853,8 +872,6 @@ namespace SQLite3Helper
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public T[] SelectArrayT<T>(string InCondition = "") where T : SyncBase, new()
         {
-            stringBuilder.Remove(0, stringBuilder.Length);
-
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
             stringBuilder.Remove(0, stringBuilder.Length);
             stringBuilder.Append("SELECT * FROM ")
@@ -909,6 +926,10 @@ namespace SQLite3Helper
                 {
                     InPropertyInfos[i].SetValue(InBaseSubclassObj, SQLite3.ColumnInt(InStmt, i), null);
                 }
+                else if (typeof(bool) == type)
+                {
+                    InPropertyInfos[i].SetValue(InBaseSubclassObj, SQLite3.ColumnInt64(InStmt, i) == 1, null);
+                }
                 else if (typeof(long) == type)
                 {
                     InPropertyInfos[i].SetValue(InBaseSubclassObj, SQLite3.ColumnInt64(InStmt, i), null);
@@ -957,7 +978,7 @@ namespace SQLite3Helper
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public bool DeleteT<T>(T InValue) where T : SyncBase
         {
-            if(null != InValue)
+            if (null != InValue)
             {
                 SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
 
@@ -1049,13 +1070,13 @@ namespace SQLite3Helper
             {
                 if (SQLite3Result.Done != SQLite3.Step(stmt))
                 {
-                    ShowMsg(SQLite3.GetErrmsg(stmt));
+                    ShowMsg(InSQLStatement + "\nError: " + SQLite3.GetErrmsg(stmt));
                     result = false;
                 }
             }
             else
             {
-                ShowMsg(SQLite3.GetErrmsg(stmt));
+                ShowMsg(InSQLStatement + "\nError: " + SQLite3.GetErrmsg(stmt));
                 result = false;
             }
 

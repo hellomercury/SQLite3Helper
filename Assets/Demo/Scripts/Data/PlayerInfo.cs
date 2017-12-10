@@ -12,6 +12,7 @@ namespace SQLite3Helper.DataStruct
         ID,
         name,
         iconid,
+        isNewPlayer,
         Max
     }
 
@@ -19,6 +20,7 @@ namespace SQLite3Helper.DataStruct
     {
         private readonly int hashCode;
 
+        [SQLite3Constraint(SQLite3Constraint.PrimaryKey )]
         [Sync((int)PlayerInfoEnum.ID)]
         public int ID { get; private set; }  //index
 
@@ -28,16 +30,20 @@ namespace SQLite3Helper.DataStruct
         [Sync((int)PlayerInfoEnum.iconid)]
         public int iconid { get; set; }  //avatar id
 
+        [Sync((int)PlayerInfoEnum.isNewPlayer)]
+        public bool isNewPlayer { get; set; }  //is new player
+
         public PlayerInfo()
         {
         }
 
-        public PlayerInfo(int InID, string Inname, int Iniconid)
+        public PlayerInfo(int InID, string Inname, int Iniconid, bool InisNewPlayer)
         {
             hashCode = InID;
             ID = InID;
             name = Inname;
             iconid = Iniconid;
+            isNewPlayer = InisNewPlayer;
         }
 
         //-------------------------------*Self Code Begin*-------------------------------
@@ -52,7 +58,7 @@ namespace SQLite3Helper.DataStruct
 
         public override string ToString()
         {
-            return "PlayerInfo : ID = " + ID+ ", name = " + name+ ", iconid = " + iconid;
+            return "PlayerInfo : ID = " + ID+ ", name = " + name+ ", iconid = " + iconid+ ", isNewPlayer = " + isNewPlayer;
         }
 
         public override bool Equals(object InObj)
