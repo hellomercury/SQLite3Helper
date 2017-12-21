@@ -144,6 +144,13 @@ namespace SQLite3Helper
             return CheckExists(stringBuilder.ToString());
         }
 
+        /// <summary>
+        /// According to a specific value to determine whether the data is in the database
+        /// </summary>
+        /// <param name="InTableName">Table name</param>
+        /// <param name="InProperty"></param>
+        /// <param name="InValue"></param>
+        /// <returns></returns>
         public bool DataExists(string InTableName, string InProperty, object InValue)
         {
             stringBuilder.Remove(0, stringBuilder.Length);
@@ -157,6 +164,12 @@ namespace SQLite3Helper
             return DataExists(stringBuilder.ToString());
         }
 
+        /// <summary>
+        /// Query whether the incoming object exists in the database
+        /// </summary>
+        /// <typeparam name="T">Subclass of SyncBase</typeparam>
+        /// <param name="InObject">Query object</param>
+        /// <returns></returns>
         public bool DataExists<T>(T InObject) where T : SyncBase
         {
             stringBuilder.Remove(0, stringBuilder.Length);
@@ -171,11 +184,21 @@ namespace SQLite3Helper
             return CheckExists(stringBuilder.ToString());
         }
 
+        /// <summary>
+        /// According to the SQL statement to check whether the specified data exists
+        /// </summary>
+        /// <param name="InSQLStatement">SQL statement</param>
+        /// <returns></returns>
         public bool DataExists(string InSQLStatement)
         {
             return CheckExists(InSQLStatement);
         }
 
+        /// <summary>
+        /// According to the SQL statement query results
+        /// </summary>
+        /// <param name="InSqlStatement">SQL statement</param>
+        /// <returns></returns>
         private bool CheckExists(string InSqlStatement)
         {
             SQLite3Statement stmt;
@@ -186,7 +209,6 @@ namespace SQLite3Helper
 
                 SQLite3Result result = SQLite3.Step(stmt);
                 if (SQLite3Result.Row == result) isExists = true;
-                else if (SQLite3Result.Error == result) isExists = false;
                 else ShowMsg(SQLite3.GetErrmsg(stmt));
 
                 SQLite3.Finalize(stmt);
@@ -210,6 +232,7 @@ namespace SQLite3Helper
         /// </summary>
         /// <param name="InTableName">In table name.</param>
         /// <param name="InColumnNameAndType">In column name and type.</param>
+        /// <param name="InOverWrite">Whether to overwrite the original form</param>
         public bool CreateTable(string InTableName, string[] InColumnNameAndType, bool InOverWrite = true)
         {
             if (InOverWrite) Exec("DROP TABLE IF EXISTS " + InTableName);
@@ -297,9 +320,7 @@ namespace SQLite3Helper
             int length = InData.Length;
             for (int i = 0; i < length; ++i)
             {
-                stringBuilder.Append("'")
-                    .Append(InData[i].ToString().Replace("'", "''"))
-                    .Append("', ");
+                stringBuilder.Append(ChangeType(InData[i]));
             }
             stringBuilder.Remove(stringBuilder.Length - 2, 2);
             stringBuilder.Append(")");
@@ -320,14 +341,11 @@ namespace SQLite3Helper
             stringBuilder.Append("INSERT INTO ").Append(property.ClassName).Append(" VALUES(");
 
             int length = property.Infos.Length;
-            bool needColon;
+            PropertyInfo info;
             for (int i = 0; i < length; i++)
             {
-                needColon = property.Infos[i].PropertyType.IsClass;
-                if (needColon) stringBuilder.Append("'");
-                stringBuilder.Append(property.Infos[i].GetValue(InValue, null).ToString().Replace("'", "''"));
-                if (needColon) stringBuilder.Append("'");
-                stringBuilder.Append(", ");
+                info = property.Infos[i];
+                stringBuilder.Append(ChangeType(info.GetValue(InValue, null), info.PropertyType)).Append(", ");
             }
             stringBuilder.Remove(stringBuilder.Length - 2, 2);
             stringBuilder.Append(")");
@@ -343,7 +361,8 @@ namespace SQLite3Helper
         public bool InsertAllT<T>(List<T> InValue) where T : SyncBase
         {
             if (null == InValue) throw new ArgumentNullException();
-            int count = InValue.Count;
+            int count = InValue.Count, length;
+            PropertyInfo info;
             if (count > 0)
             {
                 SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
@@ -353,15 +372,12 @@ namespace SQLite3Helper
                     stringBuilder.Remove(0, stringBuilder.Length);
                     stringBuilder.Append("INSERT INTO ").Append(property.ClassName).Append(" VALUES(");
 
-                    int length = property.Infos.Length;
-                    bool needColon;
+                    length = property.Infos.Length;
                     for (int j = 0; j < length; j++)
                     {
-                        needColon = property.Infos[j].PropertyType.IsClass;
-                        if (needColon) stringBuilder.Append("'");
-                        stringBuilder.Append(property.Infos[j].GetValue(InValue[i], null).ToString().Replace("'", "''"));
-                        if (needColon) stringBuilder.Append("'");
-                        stringBuilder.Append(", ");
+                        info = property.Infos[j];
+                        stringBuilder.Append(ChangeType(info.GetValue(InValue[i], null), info.PropertyType))
+                            .Append(", ");
                     }
                     stringBuilder.Remove(stringBuilder.Length - 2, 2);
                     stringBuilder.Append(")");
@@ -398,7 +414,7 @@ namespace SQLite3Helper
             int length = InData.Length;
             for (int i = 0; i < length; i++)
             {
-                stringBuilder.Append(InData[i]).Append(", ");
+                stringBuilder.Append(ChangeType(InData[i])).Append(", ");
             }
             stringBuilder.Remove(stringBuilder.Length - 2, 2);
             stringBuilder.Append(" WHERE ").Append(InCondition);
@@ -420,13 +436,14 @@ namespace SQLite3Helper
             stringBuilder.Remove(0, stringBuilder.Length);
             stringBuilder.Append("UPDATE ").Append(property.ClassName).Append(" SET ");
 
+            PropertyInfo info;
             int length = property.Infos.Length;
             for (int i = 1; i < length; i++)
             {
+                info = property.Infos[i];
                 stringBuilder.Append(property.Infos[i].Name)
-                    .Append(" = '")
-                    .Append(property.Infos[i].GetValue(InValue, null).ToString().Replace("'", "''"))
-                    .Append("', ");
+                    .Append(ChangeType(info.GetValue(InValue, null), info.PropertyType))
+                    .Append(", ");
             }
             stringBuilder.Remove(stringBuilder.Length - 2, 2);
             stringBuilder.Append(" WHERE ID = ").Append(property.Infos[0].GetValue(InValue, null));
@@ -446,14 +463,15 @@ namespace SQLite3Helper
             SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
             if (InIndex < 0 || InIndex >= property.InfosLength) throw new ArgumentOutOfRangeException();
 
+            PropertyInfo info = property.Infos[InIndex];
             stringBuilder.Remove(0, stringBuilder.Length);
             stringBuilder.Append("UPDATE ")
                 .Append(property.ClassName)
                 .Append(" SET ")
-                .Append(property.Infos[InIndex].Name)
-                .Append(" = '")
-                 .Append(property.Infos[InIndex].GetValue(InValue, null).ToString().Replace("'", "''"))
-                .Append("' WHERE ID = ")
+                .Append(info.Name)
+                .Append(" = ")
+                 .Append(ChangeType(info.GetValue(InValue, null), info.PropertyType))
+                .Append(" WHERE ID = ")
                 .Append(property.Infos[0].GetValue(InValue, null));
 
             return Exec(stringBuilder.ToString());
@@ -554,9 +572,7 @@ namespace SQLite3Helper
             }
             else return null;
         }
-
-
-
+        
         /// <summary>
         /// Resolve the database results.
         /// </summary>
@@ -878,8 +894,7 @@ namespace SQLite3Helper
                          .Append(property.ClassName)
                          .Append(" WHERE ")
                          .Append(InCondition);
-
-
+            
             SQLite3Statement stmt;
             if (ExecuteQuery(stringBuilder.ToString(), out stmt))
             {
@@ -922,29 +937,54 @@ namespace SQLite3Helper
             {
                 type = InPropertyInfos[i].PropertyType;
 
-                if (typeof(int) == type)
+                if (SyncConfig.TypeOfInt == type)
                 {
                     InPropertyInfos[i].SetValue(InBaseSubclassObj, SQLite3.ColumnInt(InStmt, i), null);
                 }
-                else if (typeof(bool) == type)
+                else if (SyncConfig.TypeOfBool == type)
                 {
-                    InPropertyInfos[i].SetValue(InBaseSubclassObj, SQLite3.ColumnInt64(InStmt, i) == 1, null);
+                    switch (SQLite3.ColumnType(InStmt, i))
+                    {
+                        case SQLite3DataType.Integer:
+                            InPropertyInfos[i].SetValue(InBaseSubclassObj, SQLite3.ColumnInt(InStmt, i) == 1, null);
+                            break;
+
+                        case SQLite3DataType.Real:
+                            InPropertyInfos[i].SetValue(InBaseSubclassObj, (int)SQLite3.ColumnDouble(InStmt, i) == 1, null);
+                            break;
+
+                        case SQLite3DataType.Text:
+                            InPropertyInfos[i].SetValue(InBaseSubclassObj, SQLite3.ColumnText(InStmt, i).ToLower().Equals("true"), null);
+                            break;
+
+                        default:
+                            InPropertyInfos[i].SetValue(InBaseSubclassObj, false, null);
+                            break;
+                    }
                 }
-                else if (typeof(long) == type)
+                else if (SyncConfig.TypeOfLong == type)
                 {
                     InPropertyInfos[i].SetValue(InBaseSubclassObj, SQLite3.ColumnInt64(InStmt, i), null);
                 }
-                else if (typeof(float) == type)
+                else if (SyncConfig.TypeOfFloat == type)
                 {
-                    InPropertyInfos[i].SetValue(InBaseSubclassObj, (float)SQLite3.ColumnDouble(InStmt, i), null);
+                    InPropertyInfos[i].SetValue(InBaseSubclassObj, (float) SQLite3.ColumnDouble(InStmt, i), null);
                 }
-                else if (typeof(double) == type)
+                else if (SyncConfig.TypeOfDouble == type)
                 {
                     InPropertyInfos[i].SetValue(InBaseSubclassObj, SQLite3.ColumnDouble(InStmt, i), null);
                 }
+                else if (SyncConfig.TypeOfString == type)
+                {
+                    InPropertyInfos[i].SetValue(InBaseSubclassObj, SyncFactory.ChangeType(SQLite3.ColumnDouble(InStmt, i), type), null);
+                }
+                else if (type.IsArray)
+                {
+                    InBaseSubclassObj.OnSyncOne(i, SQLite3.ColumnText(InStmt, i));
+                }
                 else
                 {
-                    InPropertyInfos[i].SetValue(InBaseSubclassObj, SQLite3.ColumnText(InStmt, i), null);
+                    throw new FormatException("Can not convert this type.");
                 }
             }
 
@@ -959,14 +999,11 @@ namespace SQLite3Helper
         public bool DeleteByID(string InTableName, int InID)
         {
             stringBuilder.Remove(0, stringBuilder.Length);
-            stringBuilder.Append("DELETE FROM ")
-                .Append(InTableName)
-                .Append(" WHERE ID = ")
-                .Append(InID);
+            stringBuilder.Append("DELETE FROM ").Append(InTableName).Append(" WHERE ID = ").Append(InID);
 
             bool result = Exec(stringBuilder.ToString());
 
-            Exec("VACUUM");    //rebuild the built-in index.
+            Exec("VACUUM"); //rebuild the built-in index.
 
             return result;
         }
@@ -980,17 +1017,14 @@ namespace SQLite3Helper
         {
             if (null != InValue)
             {
-                SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
+                SyncProperty property = SyncFactory.GetSyncProperty(typeof (T));
 
                 stringBuilder.Remove(0, stringBuilder.Length);
-                stringBuilder.Append("DELETE FROM ")
-                    .Append(property.ClassName)
-                    .Append(" WHERE ID = ")
-                    .Append(property.Infos[0].GetValue(InValue, null));
+                stringBuilder.Append("DELETE FROM ").Append(property.ClassName).Append(" WHERE ID = ").Append(property.Infos[0].GetValue(InValue, null));
 
                 bool result = Exec(stringBuilder.ToString());
 
-                Exec("VACUUM");    //rebuild the built-in index.
+                Exec("VACUUM"); //rebuild the built-in index.
 
                 return result;
             }
@@ -1003,15 +1037,14 @@ namespace SQLite3Helper
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public bool DeleteAllT<T>() where T : SyncBase
         {
-            SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
+            SyncProperty property = SyncFactory.GetSyncProperty(typeof (T));
 
             stringBuilder.Remove(0, stringBuilder.Length);
-            stringBuilder.Append("DELETE FROM ")
-                .Append(property.ClassName);
+            stringBuilder.Append("DELETE FROM ").Append(property.ClassName);
 
             bool result = Exec(stringBuilder.ToString());
 
-            Exec("VACUUM");    //rebuild the built-in index.
+            Exec("VACUUM"); //rebuild the built-in index.
 
             return result;
         }
@@ -1022,7 +1055,7 @@ namespace SQLite3Helper
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public bool DropTable<T>()
         {
-            return DropTable(SyncFactory.GetSyncProperty(typeof(T)).ClassName);
+            return DropTable(SyncFactory.GetSyncProperty(typeof (T)).ClassName);
         }
 
         /// <summary>
@@ -1032,8 +1065,7 @@ namespace SQLite3Helper
         public bool DropTable(string InTableName)
         {
             stringBuilder.Remove(0, stringBuilder.Length);
-            stringBuilder.Append("DROP TABLE IF EXISTS ")
-                         .Append(InTableName);
+            stringBuilder.Append("DROP TABLE IF EXISTS ").Append(InTableName);
 
             return Exec(stringBuilder.ToString());
         }
@@ -1043,9 +1075,9 @@ namespace SQLite3Helper
         /// </summary>
         /// <returns>the address of sqlite3.</returns>
         /// <param name="InSQLStatement">In sql statement.</param>
+        /// <param name="OutStmt">Out the SQLite3 handle.</param>
         private bool ExecuteQuery(string InSQLStatement, out SQLite3Statement OutStmt)
         {
-
             if (SQLite3Result.OK != SQLite3.Prepare2(handle, InSQLStatement, GetUTF8ByteCount(InSQLStatement), out OutStmt))
             {
                 ShowMsg(InSQLStatement + "\nError: " + SQLite3.GetErrmsg(OutStmt));
@@ -1053,7 +1085,10 @@ namespace SQLite3Helper
 
                 return false;
             }
-            else return true;
+            else
+            {
+                return true;
+            }
         }
 
         /// <summary>
@@ -1092,8 +1127,14 @@ namespace SQLite3Helper
         {
             if (SQLite3DbHandle.Zero != handle)
             {
-                if (SQLite3Result.OK == SQLite3.Close(handle)) handle = SQLite3DbHandle.Zero;
-                else ShowMsg(SQLite3.GetErrmsg(handle));
+                if (SQLite3Result.OK == SQLite3.Close(handle))
+                {
+                    handle = SQLite3DbHandle.Zero;
+                }
+                else
+                {
+                    ShowMsg(SQLite3.GetErrmsg(handle));
+                }
             }
         }
 
@@ -1119,6 +1160,128 @@ namespace SQLite3Helper
             Encoding.UTF8.GetBytes(InStr, 0, InStr.Length, bytes, 0);
 
             return bytes;
+        }
+
+        /// <summary>
+        /// The incoming object is converted to the corresponding string
+        /// </summary>
+        /// <param name="InValue"></param>
+        /// <returns></returns>
+        private string ChangeType(object InValue)
+        {
+            return ChangeType(InValue, InValue.GetType());
+        }
+
+        /// <summary>
+        /// According to the type of incoming objects into the corresponding string
+        /// </summary>
+        /// <param name="InValue"></param>
+        /// <param name="InType"></param>
+        /// <returns></returns>
+        private string ChangeType(object InValue, Type InType)
+        {
+            StringBuilder result = new StringBuilder(256);
+            if (InType.IsArray)
+            {
+                int rank = InType.GetArrayRank(), firstDimension, secondDimension;
+                Array array, subArray;
+                switch (rank)
+                {
+                    case 1:
+                        array = InValue as Array;
+                        if (null != array)
+                        {
+                            firstDimension = array.Length;
+                            if (0 < firstDimension)
+                            {
+                                Type subType = array.GetValue(0).GetType();
+                                if (subType.IsArray)
+                                {
+                                    if (1 == subType.GetArrayRank())
+                                    {
+                                        for (int i = 0; i < firstDimension; ++i)
+                                        {
+                                            subArray = array.GetValue(i) as Array;
+                                            for (int j = 0; j < subArray.Length; ++j)
+                                            {
+                                                result.Append(subArray.GetValue(j)).Append(SyncConfig.SyncArraySplit[1]);
+                                            }
+                                            result.Remove(result.Length - 1, 1);
+                                            result.Append(SyncConfig.SyncArraySplit[0]);
+                                        }
+                                        result.Remove(result.Length - 1, 1);
+                                    }
+                                }
+                                else
+                                {
+                                    for (int i = 0; i < firstDimension; ++i)
+                                    {
+                                        result.Append(array.GetValue(i)).Append(SyncConfig.SyncArraySplit[0]);
+                                    }
+                                    result.Remove(result.Length - 1, 1);
+                                }
+                            }
+                        }
+                        break;
+
+                    case 2:
+                        array = InValue as Array;
+                        if (null != array)
+                        {
+                            firstDimension = array.GetLength(0);
+                            secondDimension = array.GetLength(1);
+                            for (int i = 0; i < firstDimension; ++i)
+                            {
+                                for (int j = 0; j < secondDimension; ++j)
+                                {
+                                    result.Append(array.GetValue(i, j)).Append(SyncConfig.SyncArraySplit[1]);
+                                }
+                                result.Remove(result.Length - 1, 1);
+                                result.Append(SyncConfig.SyncArraySplit[0]);
+                            }
+                            result.Remove(result.Length - 1, 1);
+                        }
+                        break;
+
+                    case 3:
+                        array = InValue as Array;
+                        if (null != array)
+                        {
+                            firstDimension = array.GetLength(0);
+                            secondDimension = array.GetLength(1);
+                            int thirdDimension = array.GetLength(2);
+                            for (int i = 0; i < firstDimension; ++i)
+                            {
+                                for (int j = 0; j < secondDimension; ++j)
+                                {
+                                    for (int k = 0; k < thirdDimension; ++k)
+                                    {
+                                        result.Append(array.GetValue(i, j, k)).Append(SyncConfig.SyncArraySplit[2]);
+                                    }
+                                    result.Remove(result.Length - 1, 1);
+                                    result.Append(SyncConfig.SyncArraySplit[1]);
+                                }
+                                result.Remove(result.Length - 1, 1);
+                                result.Append(SyncConfig.SyncArraySplit[0]);
+                            }
+                            result.Remove(result.Length - 1, 1);
+                        }
+                        break;
+                }
+            }
+            else
+            {
+                if (InType.IsValueType || InType.IsEnum)
+                {
+                    result.Append(InValue);
+                }
+                else
+                {
+                    result.Append("'").Append(InValue.ToString().Replace("'", "''")).Append("'");
+                }
+            }
+
+            return result.ToString();
         }
 
         private void ShowMsg(string InMsg)

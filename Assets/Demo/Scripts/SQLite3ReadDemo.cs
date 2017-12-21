@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using SQLite3Helper;
 using SQLite3Helper.DataStruct;
 using UnityEngine;
@@ -21,10 +20,10 @@ public class SQLite3ReadDemo : MonoBehaviour
 
     string log = string.Empty;
     Vector2 scrollPos = Vector2.zero;
-    bool isSelectSingleData = false, isSelectArrayData = false, isSelectDictData;
+    bool isSelectSingleData, isSelectArrayData, isSelectDictData;
     void OnGUI()
     {
-        GUILayout.BeginArea(new Rect(0, 0, Screen.width / 3, Screen.height));
+        GUILayout.BeginArea(new Rect(0, 0, Screen.width / 3.0f, Screen.height));
         GUI.skin.button.fontSize = 32;
         GUI.skin.button.alignment = TextAnchor.MiddleLeft;
         GUI.skin.label.fontSize = 32;
@@ -105,7 +104,7 @@ public class SQLite3ReadDemo : MonoBehaviour
             if (GUILayout.Button("Get Array by Indexes"))
             {
                 Profiler.BeginSample("3");
-                Item[] items = operate.SelectArrayT<Item>(new int[] { (int)ItemEnum.ID }, new string[] { ">" }, new object[] { 20300001 });
+                Item[] items = operate.SelectArrayT<Item>(new[] { (int)ItemEnum.ID }, new[] { ">" }, new object[] { 20300001 });
                 Profiler.EndSample();
                 Debug.LogError("/*-SELECT * FROM Item WHERE ID > 20300001.-*/");
                 foreach (var itor in items)
@@ -120,7 +119,7 @@ public class SQLite3ReadDemo : MonoBehaviour
             if (GUILayout.Button("Get Dictionary by Name"))
             {
                 Profiler.BeginSample("4");
-                Item[] items = operate.SelectArrayT<Item>(new string[] { ItemEnum.ID.ToString() }, new string[] { ">" }, new object[] { 20300001 });
+                Item[] items = operate.SelectArrayT<Item>(new[] { ItemEnum.ID.ToString() }, new[] { ">" }, new object[] { 20300001 });
                 Profiler.EndSample();
                 Debug.LogError("/*-SELECT * FROM Item WHERE ID > 20300001.-*/");
                 foreach (var itor in items)
@@ -164,7 +163,7 @@ public class SQLite3ReadDemo : MonoBehaviour
             if (GUILayout.Button("Get Dictionary by ID"))
             {
                 Profiler.BeginSample("6");
-                Dictionary<int, Item> itemDict = operate.SelectDictT<Item>(new int[] { (int)ItemEnum.ID }, new string[] { ">" }, new object[] { 20300001 });
+                Dictionary<int, Item> itemDict = operate.SelectDictT<Item>(new[] { (int)ItemEnum.ID }, new[] { ">" }, new object[] { 20300001 });
                 Profiler.EndSample();
                 foreach (var itor in itemDict)
                 {
@@ -178,7 +177,7 @@ public class SQLite3ReadDemo : MonoBehaviour
             if (GUILayout.Button("Get Dictionary by Name"))
             {
                 Profiler.BeginSample("7");
-                Dictionary<int, Item> itemDict = operate.SelectDictT<Item>(new string[] { ItemEnum.ID.ToString() }, new string[] { ">" }, new object[] { 20300001 });
+                Dictionary<int, Item> itemDict = operate.SelectDictT<Item>(new[] { ItemEnum.ID.ToString() }, new[] { ">" }, new object[] { 20300001 });
                 Profiler.EndSample();
                 foreach (var itor in itemDict)
                 {
@@ -204,7 +203,7 @@ public class SQLite3ReadDemo : MonoBehaviour
 
         GUILayout.EndArea();
 
-        GUILayout.BeginArea(new Rect(Screen.width / 3, 0, Screen.width * 2 / 3, Screen.height));
+        GUILayout.BeginArea(new Rect(Screen.width / 3.0f, 0, Screen.width * 2 / 3.0f, Screen.height));
         scrollPos = GUILayout.BeginScrollView(scrollPos);
         GUILayout.Label(log);
         GUILayout.EndScrollView();
