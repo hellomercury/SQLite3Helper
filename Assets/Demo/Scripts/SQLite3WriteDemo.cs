@@ -1,9 +1,7 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using SQLite3Helper;
 using SQLite3Helper.DataStruct;
 using UnityEngine;
-using UnityEngine.Profiling;
 
 public class SQLite3WriteDemo : MonoBehaviour
 {

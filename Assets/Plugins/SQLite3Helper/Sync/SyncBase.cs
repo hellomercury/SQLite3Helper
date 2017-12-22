@@ -2,6 +2,7 @@
 
 namespace SQLite3Helper.DataStruct
 {
+
     public class SyncBase
     {
         public delegate void DlgtPropertyChanged(SyncBase InObj, string InPropertyName, object InCurrentValue, object InOldValue);

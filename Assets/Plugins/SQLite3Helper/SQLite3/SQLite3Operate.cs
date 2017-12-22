@@ -1,4 +1,19 @@
-﻿using System;
+﻿/* Copyright (c) 2017 ShenZhaoNan. All rights reserved.
+ ************************************************************************
+ * SQLite3Helper - Convert Excel data to SQLite3 Database table.
+ ************************************************************************
+ * Filename: SQLite3Operate.cs
+ * Date: 2017/12/11
+ * Author: ShenZhaoNan
+ * Email: hellomercury@vip.qq.com
+ * Blog: shenzhaonan.cn
+ ************************************************************************
+ * Describe:
+ *   
+ *   
+ */
+
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
@@ -46,9 +61,9 @@ namespace SQLite3Helper
         }
 
         /// <summary>
-        /// Open a database just to read data.
+        /// Open a database to read the data, you can not make any changes to the database. 
         /// If database is not exist there will throw a FileLoadException.
-        /// And you can not write data to the database.
+        /// when first opened database program will copy it from streamingAssetsPath directory to the persistentDataPath directory,
         /// </summary>
         /// <returns>The to read.</returns>
         /// <param name="InDbName">In db name.</param>
@@ -58,8 +73,12 @@ namespace SQLite3Helper
         }
 
         /// <summary>
-        /// Open a exist database to write and read data.
-        /// If database is not exist there will throw a FileLoadException.
+        /// Open an existing database for data read and write, 
+        /// if the database does not exist will throw a FileLoadException. 
+        /// If the database exists in the streamingAssetsPath directory, 
+        /// the database will be copied to the persistentDataPath directory, 
+        /// any operation on the database will not affect the database under the streamingAssetsPath directory.
+        /// Note that the database may be modified by players, please check the correctness of the data before use.
         /// </summary>
         /// <returns>The to write.</returns>
         /// <param name="InDbName">In db name.</param>
@@ -69,7 +88,9 @@ namespace SQLite3Helper
         }
 
         /// <summary>
-        /// Create a new database to write and write data.
+        /// Create or open a database for data read and write, 
+        /// if the database does not exist will create a new database on persistentDataPath directory. 
+        /// Note that the database may be modified by players, please check the correctness of the data before use.
         /// </summary>
         /// <returns>The SQLite3Operate object.</returns>
         /// <param name="InDbName">In db name.</param>
@@ -81,7 +102,7 @@ namespace SQLite3Helper
 
         /// <summary>
         /// Copy a exist database from the StreamingAssets path to PrersistentDataPath.
-        ///And open it according the open flags. 
+        /// And open it according the open flags.
         /// </summary>
         /// <returns>The SQLite3Operate object.</returns>
         /// <param name="InDbName">In db name.</param>
@@ -92,17 +113,15 @@ namespace SQLite3Helper
 
             if (!File.Exists(destinationPath))
             {
-                string streamPath, sourcePath;
 #if UNITY_ANDROID
-                streamPath = "jar:file://" + Application.dataPath + "!/assets/";
+                string streamPath = "jar:file://" + Application.dataPath + "!/assets/";
 #elif UNITY_IOS
-                streamPath = Application.dataPath + "/Raw/";
+                string streamPath = Application.dataPath + "/Raw/";
 #else
-                streamPath = Application.streamingAssetsPath + "/";
+                string streamPath = Application.streamingAssetsPath + "/";
 #endif
 
-                sourcePath = Path.Combine(streamPath, InDbName);
-
+                string sourcePath = Path.Combine(streamPath, InDbName);
 
 #if UNITY_ANDROID
                 using(WWW www = new WWW(sourcePath))
@@ -572,7 +591,7 @@ namespace SQLite3Helper
             }
             else return null;
         }
-        
+
         /// <summary>
         /// Resolve the database results.
         /// </summary>
@@ -894,7 +913,7 @@ namespace SQLite3Helper
                          .Append(property.ClassName)
                          .Append(" WHERE ")
                          .Append(InCondition);
-            
+
             SQLite3Statement stmt;
             if (ExecuteQuery(stringBuilder.ToString(), out stmt))
             {
@@ -968,7 +987,7 @@ namespace SQLite3Helper
                 }
                 else if (SyncConfig.TypeOfFloat == type)
                 {
-                    InPropertyInfos[i].SetValue(InBaseSubclassObj, (float) SQLite3.ColumnDouble(InStmt, i), null);
+                    InPropertyInfos[i].SetValue(InBaseSubclassObj, (float)SQLite3.ColumnDouble(InStmt, i), null);
                 }
                 else if (SyncConfig.TypeOfDouble == type)
                 {
@@ -1017,7 +1036,7 @@ namespace SQLite3Helper
         {
             if (null != InValue)
             {
-                SyncProperty property = SyncFactory.GetSyncProperty(typeof (T));
+                SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
 
                 stringBuilder.Remove(0, stringBuilder.Length);
                 stringBuilder.Append("DELETE FROM ").Append(property.ClassName).Append(" WHERE ID = ").Append(property.Infos[0].GetValue(InValue, null));
@@ -1037,7 +1056,7 @@ namespace SQLite3Helper
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public bool DeleteAllT<T>() where T : SyncBase
         {
-            SyncProperty property = SyncFactory.GetSyncProperty(typeof (T));
+            SyncProperty property = SyncFactory.GetSyncProperty(typeof(T));
 
             stringBuilder.Remove(0, stringBuilder.Length);
             stringBuilder.Append("DELETE FROM ").Append(property.ClassName);
@@ -1055,7 +1074,7 @@ namespace SQLite3Helper
         /// <typeparam name="T">Subclass of SyncBase.</typeparam>
         public bool DropTable<T>()
         {
-            return DropTable(SyncFactory.GetSyncProperty(typeof (T)).ClassName);
+            return DropTable(SyncFactory.GetSyncProperty(typeof(T)).ClassName);
         }
 
         /// <summary>
