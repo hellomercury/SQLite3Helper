@@ -22,7 +22,6 @@ using SQLite3DbHandle = System.IntPtr;
 using SQLite3Statement = System.IntPtr;
 using Object = System.Object;
 using SQLite3Helper.DataStruct;
-using System.IO;
 
 namespace SQLite3Helper
 {
@@ -43,7 +42,7 @@ namespace SQLite3Helper
         /// </summary>
         /// <param name="InDatabasePath">In database path.</param>
         /// <param name="InSQLite3OpenFlags">In SQLite3 open flags.</param>
-        private SQLite3Operate(string InDatabasePath, SQLite3OpenFlags InSQLite3OpenFlags)
+        public SQLite3Operate(string InDatabasePath, SQLite3OpenFlags InSQLite3OpenFlags)
         {
             if (string.IsNullOrEmpty(InDatabasePath)) throw new ArgumentNullException();
 
@@ -58,84 +57,6 @@ namespace SQLite3Helper
                 handle = IntPtr.Zero;
                 ShowMsg("Database failed to open.");
             }
-        }
-
-        /// <summary>
-        /// Open a database to read the data, you can not make any changes to the database. 
-        /// If database is not exist there will throw a FileLoadException.
-        /// when first opened database program will copy it from streamingAssetsPath directory to the persistentDataPath directory,
-        /// </summary>
-        /// <returns>The to read.</returns>
-        /// <param name="InDbName">In db name.</param>
-        public static SQLite3Operate LoadToRead(string InDbName)
-        {
-            return Load(InDbName, SQLite3OpenFlags.ReadOnly);
-        }
-
-        /// <summary>
-        /// Open an existing database for data read and write, 
-        /// if the database does not exist will throw a FileLoadException. 
-        /// If the database exists in the streamingAssetsPath directory, 
-        /// the database will be copied to the persistentDataPath directory, 
-        /// any operation on the database will not affect the database under the streamingAssetsPath directory.
-        /// Note that the database may be modified by players, please check the correctness of the data before use.
-        /// </summary>
-        /// <returns>The to write.</returns>
-        /// <param name="InDbName">In db name.</param>
-        public static SQLite3Operate LoadToWrite(string InDbName)
-        {
-            return Load(InDbName, SQLite3OpenFlags.ReadWrite);
-        }
-
-        /// <summary>
-        /// Create or open a database for data read and write, 
-        /// if the database does not exist will create a new database on persistentDataPath directory. 
-        /// Note that the database may be modified by players, please check the correctness of the data before use.
-        /// </summary>
-        /// <returns>The SQLite3Operate object.</returns>
-        /// <param name="InDbName">In db name.</param>
-        public static SQLite3Operate CreateAndWrite(string InDbName)
-        {
-            string destinationPath = Path.Combine(Application.persistentDataPath, InDbName);
-            return new SQLite3Operate(destinationPath, SQLite3OpenFlags.Create | SQLite3OpenFlags.ReadWrite);
-        }
-
-        /// <summary>
-        /// Copy a exist database from the StreamingAssets path to PrersistentDataPath.
-        /// And open it according the open flags.
-        /// </summary>
-        /// <returns>The SQLite3Operate object.</returns>
-        /// <param name="InDbName">In db name.</param>
-        /// <param name="InSQLite3OpenFlags">In SQLite3 open flags.</param>
-        private static SQLite3Operate Load(string InDbName, SQLite3OpenFlags InSQLite3OpenFlags)
-        {
-            string destinationPath = Path.Combine(Application.persistentDataPath, InDbName);
-
-            if (!File.Exists(destinationPath))
-            {
-#if UNITY_ANDROID
-                string streamPath = "jar:file://" + Application.dataPath + "!/assets/";
-#elif UNITY_IOS
-                string streamPath = Application.dataPath + "/Raw/";
-#else
-                string streamPath = Application.streamingAssetsPath + "/";
-#endif
-
-                string sourcePath = Path.Combine(streamPath, InDbName);
-
-#if UNITY_ANDROID
-                using(WWW www = new WWW(sourcePath))
-                {
-                    while (www.isDone){}
-                    if (string.IsNullOrEmpty(www.error)) File.WriteAllBytes(destinationPath, www.bytes);
-                    else ShowMsg(www.error);
-                }
-#else
-                File.Copy(sourcePath, destinationPath, true);
-#endif
-            }
-
-            return new SQLite3Operate(destinationPath, InSQLite3OpenFlags);
         }
 
         /// <summary>
@@ -226,9 +147,19 @@ namespace SQLite3Helper
             {
                 bool isExists = false;
 
-                SQLite3Result result = SQLite3.Step(stmt);
-                if (SQLite3Result.Row == result) isExists = true;
-                else ShowMsg(SQLite3.GetErrmsg(stmt));
+                switch (SQLite3.Step(stmt))
+                {
+                    case SQLite3Result.Row:
+                        isExists = true;
+                        break;
+
+                    case SQLite3Result.Done:
+                        break;
+
+                    default:
+                        ShowMsg(SQLite3.GetErrmsg(stmt));
+                        break;
+                }
 
                 SQLite3.Finalize(stmt);
 

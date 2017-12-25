@@ -2,6 +2,7 @@
 using System.Text;
 using NPOI.SS.UserModel;
 using System.IO;
+using SQLite3Helper.Example;
 
 namespace SQLite3Helper.Editor
 {
@@ -19,7 +20,8 @@ namespace SQLite3Helper.Editor
         {
             string path = Application.dataPath + "/" + InDatabasePath;
 
-            SQLite3Operate handle = SQLite3Operate.CreateAndWrite(path);
+            SQLite3Operate handle = new SQLite3Operate(path, 
+                SQLite3OpenFlags.Create | SQLite3OpenFlags.ReadWrite);
 
             StringBuilder sb = new StringBuilder(512);
 
