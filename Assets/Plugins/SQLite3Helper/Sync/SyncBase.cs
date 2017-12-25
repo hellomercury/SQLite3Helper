@@ -3,7 +3,7 @@
 namespace SQLite3Helper.DataStruct
 {
 
-    public class SyncBase
+    public abstract class SyncBase
     {
         public delegate void DlgtPropertyChanged(SyncBase InObj, string InPropertyName, object InCurrentValue, object InOldValue);
 
@@ -18,49 +18,40 @@ namespace SQLite3Helper.DataStruct
             propertyChangedDict = new Dictionary<string, DlgtPropertyChanged>();
         }
 
-        public void OnSyncOne(int InIndex, object InValue)
+        public virtual void OnSyncOne(int InIndex, object InValue)
         {
             factory.OnSyncOne(this, InIndex, InValue);
         }
 
-        public void OnSyncAll(object[] InObject)
+        public virtual void OnSyncAll(object[] InValues)
         {
-            int length = InObject.Length;
+            int length = InValues.Length;
 
             for (int i = 0; i < length; i++)
             {
-                factory.OnSyncOne(this, i, InObject[i]);
+                factory.OnSyncOne(this, i, InValues[i]);
             }
         }
 
-        public void RegisterPropertyChanged(string InPropertyName, DlgtPropertyChanged InPropertyChangedFuc)
+        public virtual void RegisterPropertyChanged(string InPropertyName, DlgtPropertyChanged InPropertyChangedFuc)
         {
             if (propertyChangedDict.ContainsKey(InPropertyName))
-            {
                 propertyChangedDict[InPropertyName] += InPropertyChangedFuc;
-            }
             else
-            {
                 propertyChangedDict.Add(InPropertyName, InPropertyChangedFuc);
-            }
         }
 
-        public void UnRegisterPropertyChanged(string InPropertyName, DlgtPropertyChanged InPropertyChangedFuc)
+        public virtual void UnRegisterPropertyChanged(string InPropertyName, DlgtPropertyChanged InPropertyChangedFuc)
         {
             if (propertyChangedDict.ContainsKey(InPropertyName))
-            {
                 propertyChangedDict[InPropertyName] -= InPropertyChangedFuc;
-            }
         }
 
-        public void OnPropertyChanged(string InPropertyName, object InPropertyValue, object InOldValue)
+        public virtual void OnPropertyChanged(string InPropertyName, object InPropertyValue, object InOldValue)
         {
             DlgtPropertyChanged del;
-            if (propertyChangedDict.TryGetValue(InPropertyName, out del)
-                    && del != null)
-            {
+            if (propertyChangedDict.TryGetValue(InPropertyName, out del))
                 del(this, InPropertyName, InPropertyValue, InOldValue);
-            }
         }
     }
 }
