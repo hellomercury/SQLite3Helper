@@ -19,7 +19,7 @@ public class SQLite3WriteDemo : MonoBehaviour
 
     string log = string.Empty;
     Vector2 scrollPos = Vector2.zero;
-    bool isCreate = false, isInsert = false, isDelete = false, isDrop = false;
+    bool isCreate = false, isInsert = false, isAlter = false, isDelete = false, isDrop = false;
     void OnGUI()
     {
         GUILayout.BeginArea(new Rect(0, 0, Screen.width / 3, Screen.height));
@@ -37,6 +37,7 @@ public class SQLite3WriteDemo : MonoBehaviour
                 isInsert = false;
                 isDelete = false;
                 isDrop = false;
+                isAlter = false;
             }
         }
 
@@ -70,6 +71,47 @@ public class SQLite3WriteDemo : MonoBehaviour
             GUILayout.EndHorizontal();
         }
 
+        /************************************* Alter ***********************************************************/
+        if (GUILayout.Button((isAlter ? "V" : ">") + "\tAlter Table."))
+        {
+            isAlter = !isAlter;
+            if (isAlter)
+            {
+                isCreate = false;
+                isInsert = false;
+                isDelete = false;
+                isDrop = false;
+            }
+        }
+
+        if (isAlter)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
+            if (GUILayout.Button("Alter add column"))
+            {
+                operate.AlterAddColumn("KeyValueTemp", "Age", SQLite3DataType.Integer);
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
+            if (GUILayout.Button("Alter Change column"))
+            {
+                Debug.LogError(operate.AlterChangeColumn("KeyValueTemp", "Age", SQLite3DataType.Text));
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
+            if (GUILayout.Button("Create by subclass of SyncBase."))
+            {
+                if (operate.CreateTable<PlayerInfo>())
+                    Debug.LogError("Create table Item successed.");
+            }
+            GUILayout.EndHorizontal();
+        }
+
         /************************************* Drop ***********************************************************/
         if (GUILayout.Button((isDrop ? "V" : ">") + "\tDrop Table"))
         {
@@ -79,6 +121,7 @@ public class SQLite3WriteDemo : MonoBehaviour
                 isCreate = false;
                 isInsert = false;
                 isDelete = false;
+                isAlter = false;
             }
         }
 
@@ -133,6 +176,7 @@ public class SQLite3WriteDemo : MonoBehaviour
                 isCreate = false;
                 isDelete = false;
                 isDrop = false;
+                isAlter = false;
             }
         }
 
@@ -180,6 +224,7 @@ public class SQLite3WriteDemo : MonoBehaviour
                 isCreate = false;
                 isInsert = false;
                 isDrop = false;
+                isAlter = false;
             }
         }
 

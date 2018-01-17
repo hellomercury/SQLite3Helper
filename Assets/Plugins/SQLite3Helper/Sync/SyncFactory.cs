@@ -91,6 +91,11 @@ namespace SQLite3Helper.DataStruct
             return factory;
         }
 
+        public static SyncProperty GetSyncProperty<T>() where T : SyncBase
+        {
+            return GetOrCreateSyncFactory(typeof(T)).Property;
+        }
+
         public static SyncProperty GetSyncProperty(Object InObj)
         {
             return GetOrCreateSyncFactory(InObj.GetType()).Property;

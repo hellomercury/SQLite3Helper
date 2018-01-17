@@ -33,7 +33,7 @@ namespace SQLite3Helper.DataStruct
             }
         }
 
-        public virtual void RegisterPropertyChanged(string InPropertyName, DlgtPropertyChanged InPropertyChangedFuc)
+        public void RegisterPropertyChanged(string InPropertyName, DlgtPropertyChanged InPropertyChangedFuc)
         {
             if (propertyChangedDict.ContainsKey(InPropertyName))
                 propertyChangedDict[InPropertyName] += InPropertyChangedFuc;
@@ -41,13 +41,13 @@ namespace SQLite3Helper.DataStruct
                 propertyChangedDict.Add(InPropertyName, InPropertyChangedFuc);
         }
 
-        public virtual void UnRegisterPropertyChanged(string InPropertyName, DlgtPropertyChanged InPropertyChangedFuc)
+        public void UnRegisterPropertyChanged(string InPropertyName, DlgtPropertyChanged InPropertyChangedFuc)
         {
             if (propertyChangedDict.ContainsKey(InPropertyName))
                 propertyChangedDict[InPropertyName] -= InPropertyChangedFuc;
         }
 
-        public virtual void OnPropertyChanged(string InPropertyName, object InPropertyValue, object InOldValue)
+        public void OnPropertyChanged(string InPropertyName, object InPropertyValue, object InOldValue)
         {
             DlgtPropertyChanged del;
             if (propertyChangedDict.TryGetValue(InPropertyName, out del))

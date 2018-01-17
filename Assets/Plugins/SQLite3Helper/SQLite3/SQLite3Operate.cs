@@ -38,6 +38,7 @@ namespace SQLite3Helper
         /// </summary>
         private StringBuilder stringBuilder;
 
+        #region Open
         /// <summary>
         /// Initializes a new instance of the <see cref="T:SQLite3Helper.SQLite3Operate"/> class.
         /// </summary>
@@ -114,30 +115,36 @@ namespace SQLite3Helper
             if (!File.Exists(destinationPath))
             {
 #if UNITY_ANDROID
-                string streamPath = "jar:file://" + Application.dataPath + "!/assets/";
+#if UNITY_EDITOR
+                string streamPath = Path.Combine("file:///" + Application.streamingAssetsPath, InDbName);
+#else
+                string streamPath = Path.Combine("jar:file://" + Application.dataPath + "!/assets/", InDbName);
+#endif
 #elif UNITY_IOS
                 string streamPath = Application.dataPath + "/Raw/";
 #else
                 string streamPath = Application.streamingAssetsPath + "/";
 #endif
 
-                string sourcePath = Path.Combine(streamPath, InDbName);
-
 #if UNITY_ANDROID
-                using(WWW www = new WWW(sourcePath))
+                using (WWW www = new WWW(streamPath))
                 {
-                    while (www.isDone){}
+                    while (!www.isDone) { }
                     if (string.IsNullOrEmpty(www.error)) File.WriteAllBytes(destinationPath, www.bytes);
                     else ShowMsg(www.error);
                 }
 #else
+                 string sourcePath = Path.Combine(streamPath, InDbName);
+
                 File.Copy(sourcePath, destinationPath, true);
 #endif
             }
 
             return new SQLite3Operate(destinationPath, InSQLite3OpenFlags);
         }
+        #endregion
 
+        #region Check Exists
         /// <summary>
         ///  Check the database table exists.
         /// </summary>
@@ -213,21 +220,47 @@ namespace SQLite3Helper
             return CheckExists(InSQLStatement);
         }
 
-        public bool FieldExists(string InTableName, string InCloumnName)
+        /// <summary>
+        /// Check the table exists in the field
+        /// </summary>
+        /// <typeparam name="T">Subclass of SyncBase</typeparam>
+        /// <param name="InFieldName">Field Name</param>
+        /// <returns></returns>
+        public bool FieldExists<T>(string InFieldName) where T : SyncBase
+        {
+            return FieldExists(SyncFactory.GetSyncProperty<T>().ClassName, InFieldName);
+        }
+
+        /// <summary>
+        /// Check the table exists in the field
+        /// </summary>
+        /// <typeparam name="T">Subclass of SyncBase</typeparam>
+        /// <param name="InIndex">The index of the property in the class</param>
+        /// <returns></returns>
+        public bool FieldExists<T>(int InIndex) where T : SyncBase
+        {
+            SyncProperty property = SyncFactory.GetSyncProperty<T>();
+            if (null == property || InIndex < 0 || InIndex >= property.InfosLength) return false;
+            else return FieldExists(property.ClassName, property.Infos[InIndex].Name);
+        }
+
+        /// <summary>
+        /// Check the table exists in the field
+        /// </summary>
+        /// <param name="InTableName">Database table name</param>
+        /// <param name="InFieldName">Field name</param>
+        /// <returns></returns>
+        public bool FieldExists(string InTableName, string InFieldName)
         {
             stringBuilder.Remove(0, stringBuilder.Length);
             stringBuilder.Append("SELECT * FROM sqlite_master WHERE name = '")
                 .Append(InTableName)
                 .Append("' AND sql like '%")
-                .Append(InCloumnName)
+                .Append(InFieldName)
                 .Append("%'");
-
-            Debug.LogError(stringBuilder);
 
             return CheckExists(stringBuilder.ToString());
         }
-
-
 
         /// <summary>
         /// According to the SQL statement query results
@@ -243,9 +276,6 @@ namespace SQLite3Helper
                 bool isExists = false;
 
                 SQLite3Result result = SQLite3.Step(stmt);
-                Debug.LogError(result);
-
-                Debug.LogError(SQLite3.ColumnCount(stmt));
 
                 if (SQLite3Result.Row == result) isExists = true;
                 else if (SQLite3Result.Done != result) ShowMsg(SQLite3.GetErrmsg(stmt));
@@ -256,7 +286,9 @@ namespace SQLite3Helper
             }
             return false;
         }
+        #endregion
 
+        #region Create
         /// <summary>
         /// Creates the table.
         /// </summary>
@@ -336,7 +368,37 @@ namespace SQLite3Helper
 
             return Exec(stringBuilder.ToString());
         }
+        #endregion
 
+        #region Alter
+
+        public void AlterAddColumn(string InTableName, string InColumnName, SQLite3DataType InColumnType, SQLite3Constraint InConstraint = SQLite3Constraint.Default)
+        {
+            if (TableExists(InTableName))
+            {
+                if (!FieldExists(InTableName, InColumnName))
+                {
+                    stringBuilder.Remove(0, stringBuilder.Length);
+                    stringBuilder.Append("ALTER TABLE ")
+                        .Append(InTableName)
+                        .Append(" ADD ")
+                        .Append(InColumnName)
+                        .Append(" ")
+                        .Append(InColumnType)
+                        .Append(SQLite3Utility.ConvertToString(InConstraint));
+
+                    Exec(stringBuilder.ToString());
+                }
+            }
+        }
+
+        public void AlterTableName()
+        {
+            
+        }
+#endregion
+
+        #region Insert
         /// <summary>
         /// Execute insert SQL statement.
         /// </summary>
@@ -427,7 +489,9 @@ namespace SQLite3Helper
 
             return true;
         }
+        #endregion
 
+        #region Update
         /// <summary>
         /// According to the SQL statement to update the table. 
         /// </summary>
@@ -535,7 +599,9 @@ namespace SQLite3Helper
             if (DataExists(InT)) UpdateT(InT);
             else InsertT(InT);
         }
-
+        #endregion
+        
+        #region Select
         /// <summary>
         /// According to the ID from the table to read multiple data.
         /// SELECT $InColumnName$ FROM $InTableName$ WHERE 
@@ -694,7 +760,7 @@ namespace SQLite3Helper
                          .Append(" WHERE ")
                          .Append(property.Infos[InPropertyIndex].Name)
                          .Append(" = '")
-                         .Append(InExpectedValue.GetType().Equals(typeof(string)) ? InExpectedValue.ToString().Replace("'", "''") : InExpectedValue)
+                         .Append(InExpectedValue is string ? InExpectedValue.ToString().Replace("'", "''") : InExpectedValue)
                          .Append("'");
 
             return SelectTBySQLCommand<T>(stringBuilder.ToString());
@@ -715,7 +781,7 @@ namespace SQLite3Helper
                          .Append(" WHERE ")
                          .Append(InPropertyName)
                          .Append(" = '")
-                         .Append(InExpectedValue.GetType().Equals(typeof(string)) ? InExpectedValue.ToString().Replace("'", "''") : InExpectedValue)
+                         .Append(InExpectedValue is string ? InExpectedValue.ToString().Replace("'", "''") : InExpectedValue)
                          .Append("'");
 
             return SelectTBySQLCommand<T>(stringBuilder.ToString());
@@ -1029,7 +1095,9 @@ namespace SQLite3Helper
 
             return InBaseSubclassObj;
         }
+        #endregion
 
+        #region Delete
         /// <summary>
         /// Deletes the data by identifier.
         /// </summary>
@@ -1087,7 +1155,9 @@ namespace SQLite3Helper
 
             return result;
         }
+        #endregion
 
+        #region Drop
         /// <summary>
         /// Drop the table.
         /// </summary>
@@ -1108,6 +1178,30 @@ namespace SQLite3Helper
 
             return Exec(stringBuilder.ToString());
         }
+        #endregion
+
+        #region Close
+        /// <summary>
+        /// Closes the database.
+        /// </summary>
+        public void CloseDB()
+        {
+            if (SQLite3DbHandle.Zero != handle)
+            {
+                if (SQLite3Result.OK == SQLite3.Close(handle))
+                {
+                    handle = SQLite3DbHandle.Zero;
+                }
+                else
+                {
+                    ShowMsg(SQLite3.GetErrmsg(handle));
+                }
+            }
+        }
+
+        #endregion
+
+        #region Common Function
 
         /// <summary>
         /// Executed the SQL statement and return the address of sqlite3.
@@ -1157,24 +1251,6 @@ namespace SQLite3Helper
             SQLite3.Finalize(stmt);
 
             return result;
-        }
-
-        /// <summary>
-        /// Closes the database.
-        /// </summary>
-        public void CloseDB()
-        {
-            if (SQLite3DbHandle.Zero != handle)
-            {
-                if (SQLite3Result.OK == SQLite3.Close(handle))
-                {
-                    handle = SQLite3DbHandle.Zero;
-                }
-                else
-                {
-                    ShowMsg(SQLite3.GetErrmsg(handle));
-                }
-            }
         }
 
         /// <summary>
@@ -1322,8 +1398,9 @@ namespace SQLite3Helper
 
             return result.ToString();
         }
-
-        private void ShowMsg(string InMsg)
+        #endregion
+        
+        private static void ShowMsg(string InMsg)
         {
             Debug.LogError(InMsg);
         }
