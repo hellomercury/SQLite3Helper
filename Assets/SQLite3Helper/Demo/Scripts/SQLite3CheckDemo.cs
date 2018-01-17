@@ -41,8 +41,8 @@ public class SQLite3CheckDemo : MonoBehaviour
             GUILayout.Space(64);
             if (GUILayout.Button("Check table exists by table name."))
             {
-                PlayerInfo info = operate.SelectTByID<PlayerInfo>(6);
-                Debug.LogError(info);
+                bool result = operate.TableExists<PlayerInfo>();
+                Debug.LogError(result);
             }
             GUILayout.EndHorizontal();
 
@@ -50,7 +50,7 @@ public class SQLite3CheckDemo : MonoBehaviour
             GUILayout.Space(64);
             if (GUILayout.Button("Check table exists by table name."))
             {
-               bool result = operate.TableExists("CheckTable");
+                bool result = operate.TableExists("CheckTable");
                 Debug.LogError(result);
             }
             GUILayout.EndHorizontal();
@@ -63,6 +63,26 @@ public class SQLite3CheckDemo : MonoBehaviour
                 Debug.LogError(result);
             }
             GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
+            if (GUILayout.Button("check field Description exists by object."))
+            {
+                bool result = operate.FieldExists("CheckTable", "Description");
+                Debug.LogError(result);
+            }
+            GUILayout.EndHorizontal();
+
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(64);
+            if (GUILayout.Button("check field TEST exists by object."))
+            {
+                bool result = operate.FieldExists("CheckTable", "TEST");
+                Debug.LogError(result);
+            }
+            GUILayout.EndHorizontal();
+
 
             GUILayout.BeginHorizontal();
             GUILayout.Space(64);

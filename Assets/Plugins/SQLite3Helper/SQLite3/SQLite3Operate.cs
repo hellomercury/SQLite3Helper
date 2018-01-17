@@ -213,6 +213,22 @@ namespace SQLite3Helper
             return CheckExists(InSQLStatement);
         }
 
+        public bool FieldExists(string InTableName, string InCloumnName)
+        {
+            stringBuilder.Remove(0, stringBuilder.Length);
+            stringBuilder.Append("SELECT * FROM sqlite_master WHERE name = '")
+                .Append(InTableName)
+                .Append("' AND sql like '%")
+                .Append(InCloumnName)
+                .Append("%'");
+
+            Debug.LogError(stringBuilder);
+
+            return CheckExists(stringBuilder.ToString());
+        }
+
+
+
         /// <summary>
         /// According to the SQL statement query results
         /// </summary>
@@ -227,8 +243,12 @@ namespace SQLite3Helper
                 bool isExists = false;
 
                 SQLite3Result result = SQLite3.Step(stmt);
+                Debug.LogError(result);
+
+                Debug.LogError(SQLite3.ColumnCount(stmt));
+
                 if (SQLite3Result.Row == result) isExists = true;
-                else ShowMsg(SQLite3.GetErrmsg(stmt));
+                else if (SQLite3Result.Done != result) ShowMsg(SQLite3.GetErrmsg(stmt));
 
                 SQLite3.Finalize(stmt);
 
